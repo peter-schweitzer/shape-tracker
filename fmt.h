@@ -18,7 +18,7 @@ void print_tensor(tensor_t* t) {
 void print_mat(tensor_t* m) {
   assert(m->rank == 2);
 
-  printf("Matrix %ld x %ld\n", m->dims[0], m->dims[1]);
+  printf("Matrix %ld x %ld\n\n", m->dims[0], m->dims[1]);
   u64 idx[MAX_TENSOR_DIMS] = {0, 0, 0, 0};
   for (u64 y = 0; y < m->dims[0]; ++y) {
     idx[0] = y;
