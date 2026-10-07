@@ -2,6 +2,6 @@
 
 set -euxo pipefail
 
-gcc --std=gnu23 -Wall -Wextra -pedantic main.c -o shapetracker
+gcc --std=gnu23 -Wall -Wextra -pedantic -Wno-variadic-macros -lm main.c -o shapetracker
 
 ./shapetracker
