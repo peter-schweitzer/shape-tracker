@@ -36,11 +36,11 @@ u64 view_idx(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) {
   return idx;
 }
 
-inline f32 view_get(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) { return v->t->dat[view_idx(v, idxs)]; }
-inline void view_set(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS], f32 val) { v->t->dat[view_idx(v, idxs)] = val; }
+f32 view_get(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) { return v->t->dat[view_idx(v, idxs)]; }
+void view_set(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS], f32 val) { v->t->dat[view_idx(v, idxs)] = val; }
 
 tensor_t* make_view_contiguous(tensor_view_t* v) {
-  tensor_t* t = make_tensor_with_shape(v->rank, v->dims);
+  tensor_t* t = make_tensor_from_shape(v->rank, v->dims);
 
   u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);
   for (u64 idx = 0; idx < v->n_el; ++idx) {

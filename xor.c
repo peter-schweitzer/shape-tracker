@@ -31,11 +31,15 @@ param_t* scuffed_linear(param_t* x, param_t* weight, param_t* bias) {
   tensor_view_t* _s_r = slice(r->data.t, I_DIMS(0, 0), I_DIMS(0, -1), U_DIMS(1, 1));
   param_t* s_r = make_param_from_view(_s_r);
 
+  param_t* bias_c = clone(bias);
+  reshape_tensor(bias_c->data.t, 2, U_DIMS(1, numel_(bias)));
+
   for (u64 i = 0; i < dims_r[0]; ++i) {
     _s_r->offsets[0] = i * dims_r[1];
     op_add_(s_r, bias);
   }
 
+  free(bias);
   free(_s_r);
   return r;
 }
@@ -85,7 +89,7 @@ int main(void) {
   set_(b2, U_DIMS(0), 0.3463);
 #pragma endregion
 
-  MAKE_TENSOR_FROM_DIMS(_x, U_DIMS(4, 2));
+  MAKE_TENSOR_FROM_DIMS(_x, 4, 2);
   fill(_x, 0.0);
 
   param_t* x = make_param_from_tensor(_x);
@@ -95,7 +99,7 @@ int main(void) {
   set_(x, U_DIMS(3, 0), 1.0);
   set_(x, U_DIMS(3, 1), 1.0);
 
-  MAKE_TENSOR_FROM_DIMS(_y, U_DIMS(4, 1));
+  MAKE_TENSOR_FROM_DIMS(_y, 4, 1);
   fill(_y, 0.0);
   param_t* y = make_param_from_tensor(_y);
 

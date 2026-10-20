@@ -31,8 +31,6 @@ param_t* make_param_from_view(tensor_view_t* v) {
 param_t* make_param_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) { return make_param_from_tensor(make_tensor_from_shape(rank, dims)); }
 
 void destroy_param(param_t* p) {
-  tensor_t* t;
-
   switch (p->type) {
     case TENSOR:
       destroy_tensor(*((tensor_t**)p));
@@ -114,9 +112,11 @@ f32 get_(param_t* p, u64 idxs[MAX_TENSOR_DIMS]) {
 void set_(param_t* p, u64 idxs[MAX_TENSOR_DIMS], f32 val) {
   switch (p->type) {
     case TENSOR:
-      return tensor_set(p->data.t, idxs, val);
+      tensor_set(p->data.t, idxs, val);
+      return;
     case VIEW:
-      return view_set(p->data.v, idxs, val);
+      view_set(p->data.v, idxs, val);
+      return;
   }
 
   assert(false);
@@ -143,11 +143,11 @@ param_t* clone(param_t* p) {
 void print(param_t* p) {
   switch (p->type) {
     case TENSOR:
-      print_tensor((tensor_t*)p);
-      break;
+      print_tensor(*((tensor_t**)p));
+      return;
     case VIEW:
-      print_view((tensor_view_t*)p);
-      break;
+      print_view(*((tensor_view_t**)p));
+      return;
   }
 
   assert(false);
@@ -157,10 +157,10 @@ void print_mat(param_t* p) {
   switch (p->type) {
     case TENSOR:
       print_tensor_mat(*((tensor_t**)p));
-      break;
+      return;
     case VIEW:
       print_view_mat(*((tensor_view_t**)p));
-      break;
+      return;
   }
 
   assert(false);
