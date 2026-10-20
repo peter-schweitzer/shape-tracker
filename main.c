@@ -27,11 +27,11 @@ int main(void) {
     param_t* p_a = make_param_from_tensor(a);
     print_mat(p_a);
 
-    MAKE_TENSOR_FROM_DIMS(b, 4, 2)
+    MAKE_TENSOR_FROM_DIMS(b, 4, 2);
     param_t* p_b = make_param_from_tensor(b);
     print_mat(p_b);
 
-    param_t* p_c = mat_mul(p_a, p_b);
+    param_t* p_c = op_matmul(p_a, p_b);
     print_mat(p_c);
 
     destroy_param(p_a);

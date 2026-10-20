@@ -21,8 +21,9 @@ f32* get_n_rand_f32(u64 n) {
 }
 
 param_t* scuffed_linear(param_t* x, param_t* weight, param_t* bias) {
-  param_t* w_T = transpose(weight);
-  param_t* r = mat_mul(x, w_T);
+  param_t* w_T = op_transpose(weight);
+  param_t* r = op_matmul(x, w_T);
+  destroy_param(w_T);
 
   u64* dims_r = dims_(r);
   assert(dims_r[1] == dims_(bias)[0]);
@@ -32,7 +33,7 @@ param_t* scuffed_linear(param_t* x, param_t* weight, param_t* bias) {
 
   for (u64 i = 0; i < dims_r[0]; ++i) {
     _s_r->offsets[0] = i * dims_r[1];
-    add_(s_r, bias);
+    op_add_(s_r, bias);
   }
 
   free(_s_r);
@@ -42,7 +43,7 @@ param_t* scuffed_linear(param_t* x, param_t* weight, param_t* bias) {
 param_t* xor_forward(param_t* x, param_t* w1, param_t* b1, param_t* w2, param_t* b2) {
   param_t* r = scuffed_linear(x, w1, b1);
 
-  tanh_(r);
+  op_tanh_(r);
 
   {
     param_t* tmp = scuffed_linear(r, w2, b2);
@@ -50,7 +51,7 @@ param_t* xor_forward(param_t* x, param_t* w1, param_t* b1, param_t* w2, param_t*
     r = tmp;
   }
 
-  tanh_(r);
+  op_tanh_(r);
 
   return r;
 }
