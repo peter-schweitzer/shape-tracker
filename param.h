@@ -30,7 +30,7 @@ param_t* make_param_from_view(tensor_view_t* v) {
 // this creates a new `tensor_t` to hold the underlaying data
 param_t* make_param_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) { return make_param_from_tensor(make_tensor_from_shape(rank, dims)); }
 
-void destoy_param(param_t* p) {
+void destroy_param(param_t* p) {
   tensor_t* t;
 
   switch (p->type) {

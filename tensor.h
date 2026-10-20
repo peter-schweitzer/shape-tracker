@@ -60,7 +60,7 @@ tensor_t* make_tensor_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   return t;
 }
 
-#define MAKE_TENSOR_FROM_DIMS(t, dims...) tensor_t* t = make_tensor_from_shape(_VA_CNT(u64, dims), U_DIMS(dims));
+#define MAKE_TENSOR_FROM_DIMS(t, dims...) tensor_t* t = make_tensor_from_shape(_VA_CNT(u64, dims), U_DIMS(dims))
 
 tensor_t* clone_tensor(tensor_t* t) {
   tensor_t* t2 = make_tensor_from_shape(t->rank, t->dims);
