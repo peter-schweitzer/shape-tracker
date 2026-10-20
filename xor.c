@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "fmt.h"
+#include "loss.h"
 #include "num_types.h"
 #include "ops.h"
 #include "tensor.h"
@@ -111,7 +112,11 @@ int main(void) {
   for (u64 i = 0; i < EPOCHS; ++i) {
     param_t* y_hat = xor_forward(x, w1, b1, w2, b2);
 
-    if (i % 100 == 0) print_mat(y_hat);
+    if (i % 100 == 0) {
+      print_mat(y_hat);
+
+      printf("loss: %6.3f\n", calc_MSE_loss(y_hat, y));
+    }
     // TODO: backprop / grad
   }
 
