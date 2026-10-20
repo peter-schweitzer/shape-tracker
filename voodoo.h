@@ -28,3 +28,14 @@
 #define ALLOC_PTR(type, name) type* name = malloc(sizeof(type))
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
+
+#define IDX2IDXS(idx, idxs, rank, dims) \
+  {                                     \
+    u64 i = idx;                        \
+    for (u64 o = 0; o < rank; ++o) {    \
+      u64 dim = rank - o - 1;           \
+      u64 d = dims[dim];                \
+      idxs[dim] = i % d;                \
+      i /= d;                           \
+    }                                   \
+  }
