@@ -1,0 +1,212 @@
+#pragma once
+
+#include "tensor.h"
+#include "tensor_view.h"
+
+typedef enum PARAM_TENSOR_TYPES { TENSOR, VIEW } PARAM_TENSOR_TYPES;
+
+typedef struct param_t {
+  union {
+    tensor_t* t;
+    tensor_view_t* v;
+  } data;
+  PARAM_TENSOR_TYPES type;
+} param_t;
+
+param_t* make_param_from_tensor(tensor_t* t) {
+  ALLOC_PTR(param_t, p);
+  p->type = TENSOR;
+  p->data.t = t;
+  return p;
+}
+
+param_t* make_param_from_view(tensor_view_t* v) {
+  ALLOC_PTR(param_t, p);
+  p->type = VIEW;
+  p->data.v = v;
+  return p;
+}
+
+// this creates a new `tensor_t` to hold the underlaying data
+param_t* make_param_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) { return make_param_from_tensor(make_tensor_from_shape(rank, dims)); }
+
+void destoy_param(param_t* p) {
+  tensor_t* t;
+
+  switch (p->type) {
+    case TENSOR:
+      destroy_tensor(*((tensor_t**)p));
+      break;
+    case VIEW:
+      destroy_view(*((tensor_view_t**)p));
+      break;
+  }
+
+  free(p);
+}
+
+u64 numel_(param_t* p) {
+  switch (p->type) {
+    case TENSOR:
+      return (*((tensor_t**)p))->n_el;
+    case VIEW:
+      return (*((tensor_view_t**)p))->n_el;
+  }
+
+  assert(false);
+}
+
+u64 rank_(param_t* p) {
+  switch (p->type) {
+    case TENSOR:
+      return p->data.t->rank;
+    case VIEW:
+      return p->data.v->rank;
+  }
+
+  assert(false);
+}
+
+u64* dims_(param_t* p) {
+  switch (p->type) {
+    case TENSOR:
+      return p->data.t->dims;
+    case VIEW:
+      return p->data.v->dims;
+  }
+
+  assert(false);
+}
+
+u64* offs_(param_t* p) {
+  switch (p->type) {
+    case TENSOR:
+      return U_DIMS(0);
+    case VIEW:
+      return (*((tensor_view_t**)p))->offsets;
+  }
+
+  assert(false);
+}
+
+u64* strides_(param_t* p) {
+  switch (p->type) {
+    case TENSOR:
+      return p->data.t->strides;
+    case VIEW:
+      return (u64*)p->data.v->strides;
+  }
+
+  assert(false);
+}
+
+f32 get_(param_t* p, u64 idxs[MAX_TENSOR_DIMS]) {
+  switch (p->type) {
+    case TENSOR:
+      return tensor_get(p->data.t, idxs);
+    case VIEW:
+      return view_get(p->data.v, idxs);
+  }
+
+  assert(false);
+}
+
+void set_(param_t* p, u64 idxs[MAX_TENSOR_DIMS], f32 val) {
+  switch (p->type) {
+    case TENSOR:
+      return tensor_set(p->data.t, idxs, val);
+    case VIEW:
+      return view_set(p->data.v, idxs, val);
+  }
+
+  assert(false);
+}
+
+bool same_shape(param_t* a, param_t* b) {
+  u64 rank = rank_(a);
+  if (rank != rank_(b)) return false;
+
+  u64* dims_a = dims_(a);
+  u64* dims_b = dims_(b);
+  for (u64 dim = 0; dim < rank; ++dim)
+    if (dims_a[dim] != dims_b[dim]) return false;
+
+  return true;
+}
+
+param_t* clone(param_t* p) {
+  ALLOC_PTR(param_t, c);
+  memcpy(c, p, sizeof(param_t));
+  return c;
+}
+
+void print(param_t* p) {
+  switch (p->type) {
+    case TENSOR:
+      print_tensor((tensor_t*)p);
+      break;
+    case VIEW:
+      print_view((tensor_view_t*)p);
+      break;
+  }
+
+  assert(false);
+}
+
+void print_mat(param_t* p) {
+  switch (p->type) {
+    case TENSOR:
+      print_tensor_mat(*((tensor_t**)p));
+      break;
+    case VIEW:
+      print_view_mat(*((tensor_view_t**)p));
+      break;
+  }
+
+  assert(false);
+}
+
+param_t* mat_mul(param_t* a, param_t* b) {
+  u64 dims_a[MAX_TENSOR_DIMS] = dims_(a);
+  u64 dims_b[MAX_TENSOR_DIMS] = dims_(b);
+
+  assert(rank_(a) == 2 && rank_(b) == 2 && dims_a[1] == dims_b[0]);
+
+  u64 i = dims_a[0];
+  u64 j = dims_b[1];
+  u64 k = dims_a[1];
+
+  MAKE_TENSOR_FROM_DIMS(out, i, j);
+
+  u64 a_idx[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 b_idx[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 out_idx[MAX_TENSOR_DIMS] = DIMS(0);
+
+  for (u64 x = 0; x < j; ++x) {
+    b_idx[1] = x;
+    out_idx[1] = x;
+    for (u64 y = 0; y < i; ++y) {
+      a_idx[0] = y;
+      out_idx[0] = y;
+
+      f32 acc = 0.0;
+      for (u64 n = 0; n < k; ++n) {
+        a_idx[1] = n;
+        b_idx[0] = n;
+        acc += get_(a, a_idx) * get_(b, b_idx);
+      }
+
+      tensor_set(out, out_idx, acc);
+    }
+  }
+
+  return make_param_from_tensor(out);
+}
+
+param_t* permute_(param_t* p, u64 idxs[MAX_TENSOR_DIMS]) {
+
+};
+
+param_t* permute(param_t* p, u64 idxs[MAX_TENSOR_DIMS]) {
+
+};
