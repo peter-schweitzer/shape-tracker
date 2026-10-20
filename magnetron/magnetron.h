@@ -151,7 +151,7 @@ extern MAG_EXPORT const mag_dtype_info_t* mag_dtype_info_of(mag_dtype_t type);
     _(SIN,              "sin",              1, 0, true)/* R = sin X */__\
     _(COS,              "cos",              1, 0, true)/* R = cos X */__\
     _(STEP,             "step",             1, 0, true)/* R = step(X) */__\
-    _(SOFTMAX,          "softmax'",         1, 0, true)/* R = softmax(X) */__\
+    _(SOFTMAX,          "softmax",          1, 0, true)/* R = softmax(X) */__\
     _(SOFTMAX_DV,       "softmax'",         1, 0, true)/* R = softmax'(X) */__\
     _(SIGMOID,          "sigmoid",          1, 0, true)/* R = sigmoid(X) */__\
     _(SIGMOID_DV,       "sigmoid'",         1, 0, true)/* R = sigmoid'(X) */__\
