@@ -27,17 +27,15 @@ param_t* scuffed_linear(param_t* x, param_t* weight, param_t* bias) {
   u64* dims_r = dims_(r);
   assert(dims_r[1] == dims_(bias)[0]);
 
-  for (u64 i0 = 0; i0 < dims_r[0]; ++i0) {
-    for (u64 i1 = 0; i1 < dims_r[1]; ++i1) {
-      u64 r_idx[MAX_TENSOR_DIMS] = DIMS(i0, i1);
+  tensor_view_t* _s_r = slice(r->data.t, I_DIMS(0, 0), I_DIMS(0, -1), U_DIMS(1, 1));
+  param_t* s_r = make_param_from_view(_s_r);
 
-      f32 v_r = get_(r, r_idx);
-      f32 v_b = get_(bias, U_DIMS(i1));
-
-      set_(r, r_idx, v_r + v_b);
-    }
+  for (u64 i = 0; i < dims_r[0]; ++i) {
+    _s_r->offsets[0] = i * dims_r[1];
+    add_(s_r, bias);
   }
 
+  free(_s_r);
   return r;
 }
 
