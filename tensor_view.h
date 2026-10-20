@@ -16,7 +16,10 @@ typedef struct tensor_view_t {
   i64 strides[MAX_TENSOR_DIMS];
 } tensor_view_t;
 
-void destroy_view(tensor_view_t* v) { free(v); }
+void destroy_view(tensor_view_t* v) {
+  destroy_tensor(*((tensor_t**)v));
+  free(v);
+}
 
 tensor_view_t* clone_view(tensor_view_t* v) {
   ALLOC_PTR(tensor_view_t, c);
