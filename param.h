@@ -136,8 +136,18 @@ bool same_shape(param_t* a, param_t* b) {
 
 param_t* clone(param_t* p) {
   ALLOC_PTR(param_t, c);
-  memcpy(c, p, sizeof(param_t));
-  return c;
+  c->type = p->type;
+
+  switch (p->type) {
+    case TENSOR:
+      c->data.t = clone_tensor(p->data.t);
+      return c;
+    case VIEW:
+      c->data.v = clone_view(p->data.v);
+      return c;
+  }
+
+  assert(false);
 }
 
 void print(param_t* p) {
