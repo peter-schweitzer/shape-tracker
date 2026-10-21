@@ -15,6 +15,10 @@ typedef struct tensor_t {
   u64 n_el;
   u64 rank;
   u64 dims[MAX_TENSOR_DIMS];
+  // offsets should always be 0
+  // the tensor always uses all of the underlying memory
+  // this is only needed for `param_t`
+  u64 offsets[MAX_TENSOR_DIMS];
   u64 strides[MAX_TENSOR_DIMS];
 } tensor_t;
 
@@ -23,10 +27,13 @@ tensor_t* make_tensor(u64 n_el) {
   for (u64 i = 0; i < n_el; ++i) dat[i] = 1.0 * i;
 
   ALLOC_PTR(tensor_t, t);
+  memset(t, 0, sizeof(tensor_t));
+
   t->n_el = n_el;
   t->dat = dat;
   t->rank = 1;
   t->dims[0] = n_el;
+  t->strides[0] = 1;
 
   return t;
 }

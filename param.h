@@ -79,10 +79,7 @@ u64* dims_(param_t* p) {
 u64* offs_(param_t* p) {
   switch (p->type) {
     case TENSOR:
-      // FIXME: might be bad to return a stack memory address
-      // the address might point to unsafe memory after the stackframe is popped
-      // might be best to add offsets to `tensor_t` and always initialize it with 0
-      return U_DIMS(0);
+      return (*((tensor_t**)p))->offsets;
     case VIEW:
       return (*((tensor_view_t**)p))->offsets;
   }

@@ -100,7 +100,7 @@ tensor_view_t* permute_tensor(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) {
   return v;
 }
 
-tensor_view_t* premute_view(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) {
+tensor_view_t* permute_view(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) {
   u64 dims[MAX_TENSOR_DIMS] = DIMS(0);
   u64 offsets[MAX_TENSOR_DIMS] = DIMS(0);
   u64 strides[MAX_TENSOR_DIMS] = DIMS(0);
