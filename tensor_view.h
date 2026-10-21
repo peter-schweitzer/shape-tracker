@@ -58,20 +58,31 @@ tensor_t* make_view_contiguous(tensor_view_t* v) {
   return t;
 }
 
-tensor_view_t* transpose_view(tensor_t* t) {
+tensor_view_t* transpose_tensor(tensor_t* t) {
   u64 r = t->rank;
   assert(r >= 2);
 
   ALLOC_PTR(tensor_view_t, v);
+  v->t = t;
   v->n_el = t->n_el;
   v->rank = r;
   memcpy(v->dims, t->dims, sizeof(t->dims));
-  memset(v->offsets, 0, sizeof(v->offsets));
+  memcpy(v->offsets, t->offsets, sizeof(t->offsets));
   memcpy(v->strides, t->strides, sizeof(t->strides));
 
   SWAP(v->strides[r - 2], v->strides[r - 1]);
 
   return v;
+}
+
+tensor_view_t* transpose_view(tensor_view_t* v) {
+  u64 r = v->rank;
+  assert(r >= 2);
+
+  tensor_view_t* c = clone_view(v);
+  SWAP(c->strides[r - 2], c->strides[r - 1]);
+
+  return c;
 }
 
 void transpose_view_(tensor_view_t* v) {
