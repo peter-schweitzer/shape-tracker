@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "fmt.h"
 #include "num_types.h"
 #include "ops.h"
@@ -49,7 +47,6 @@ int main(void) {
 
     destroy_tensor(a);
     destroy_view(b_v);
-    destroy_tensor(b);
   }
 
   {
@@ -59,10 +56,11 @@ int main(void) {
     tensor_view_t* v = slice(t, I_DIMS(1, 2), I_DIMS(-1, -1), U_DIMS(2, 2));
     print_view_mat(v);
 
-    transpose_view(v);
+    transpose_view_(v);
     print_view_mat(v);
 
     destroy_tensor(t);
   }
+
   return 0;
 }

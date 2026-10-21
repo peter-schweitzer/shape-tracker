@@ -93,7 +93,3 @@ void tensor_set(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS], f32 val) { t->dat[idx(t,
 void fill(tensor_t* t, f32 val) {
   for (u64 i = 0; i < t->n_el; ++i) t->dat[i] = val;
 }
-
-void tanh_tensor(tensor_t* t) {
-  for (u64 i = 0; i < t->n_el; ++i) t->dat[i] = tanhf((float)(t->dat[i]));
-}

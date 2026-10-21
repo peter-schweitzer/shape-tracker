@@ -134,7 +134,7 @@ tensor_view_t* permute_view(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) {
   return r;
 }
 
-void premute_view_(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) {
+void permute_view_(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) {
   u64 dims[MAX_TENSOR_DIMS] = DIMS(0);
   u64 offsets[MAX_TENSOR_DIMS] = DIMS(0);
   u64 strides[MAX_TENSOR_DIMS] = DIMS(0);
