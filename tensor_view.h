@@ -112,82 +112,43 @@ tensor_view_t* permute_tensor(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) {
 }
 
 tensor_view_t* permute_view(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) {
-  u64 dims[MAX_TENSOR_DIMS] = DIMS(0);
-  u64 offsets[MAX_TENSOR_DIMS] = DIMS(0);
-  u64 strides[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 _dims[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
 
   for (u64 dim = 0; dim < v->rank; ++dim) {
     /* Check that all axes are unique */
     for (u64 i = dim + 1; i < v->rank; ++i) assert(idxs[dim] != idxs[i]);
 
-    dims[dim] = v->dims[idxs[dim]];
-    offsets[dim] = v->offsets[idxs[dim]];
-    strides[dim] = v->strides[idxs[dim]];
+    _dims[dim] = v->dims[idxs[dim]];
+    _offsets[dim] = v->offsets[idxs[dim]];
+    _strides[dim] = v->strides[idxs[dim]];
   }
 
   ALLOC_PTR(tensor_view_t, r);
 
-  memcpy(r->dims, dims, sizeof(r->dims));
-  memcpy(r->offsets, offsets, sizeof(r->offsets));
-  memcpy(r->strides, strides, sizeof(r->strides));
+  CPY_FIELD(r, dims);
+  CPY_FIELD(r, offsets);
+  CPY_FIELD(r, strides);
 
   return r;
 }
 
 void permute_view_(tensor_view_t* v, u64 idxs[MAX_TENSOR_DIMS]) {
-  u64 dims[MAX_TENSOR_DIMS] = DIMS(0);
-  u64 offsets[MAX_TENSOR_DIMS] = DIMS(0);
-  u64 strides[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 _dims[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
 
   for (u64 dim = 0; dim < v->rank; ++dim) {
     /* Check that all axes are unique */
     for (u64 i = dim + 1; i < v->rank; ++i) assert(idxs[dim] != idxs[i]);
 
-    dims[dim] = v->dims[idxs[dim]];
-    offsets[dim] = v->offsets[idxs[dim]];
-    strides[dim] = v->strides[idxs[dim]];
+    _dims[dim] = v->dims[idxs[dim]];
+    _offsets[dim] = v->offsets[idxs[dim]];
+    _strides[dim] = v->strides[idxs[dim]];
   }
 
-  memcpy(v->dims, dims, sizeof(v->dims));
-  memcpy(v->offsets, offsets, sizeof(v->offsets));
-  memcpy(v->strides, strides, sizeof(v->strides));
-}
-
-tensor_view_t* slice(tensor_t* t, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) {
-  ALLOC_PTR(tensor_view_t, v);
-  v->t = t;
-  v->rank = t->rank;
-
-  v->n_el = 0;
-  for (u64 dim = 0; dim < t->rank; ++dim) {
-    u64 d = t->dims[dim];
-
-    i64 from = froms[dim];
-    assert(from < 0 ? (u64)(-from) <= d : (u64)(from) < d);
-    u64 offset = (from + d) % d;
-
-    i64 to = tos[dim];
-    assert(to < 0 ? (u64)(-to) <= d : (u64)(to) < d);
-    u64 end = ((u64)(to + d)) % d;
-
-    i64 stride = (i64)strides[dim];
-    assert(stride != 0);
-
-    i64 span = end - offset;
-    if (span < 0) {
-      offset = end;
-      stride = -stride;
-    }
-
-    i64 _d = span / stride;
-    u64 d_s = 1 + ((u64)ABS(_d));
-    v->dims[dim] = d_s;
-    v->n_el += d_s;
-
-    u64 s_t = t->strides[dim];
-    v->offsets[dim] = offset * s_t;
-    v->strides[dim] = stride * s_t;
-  }
-
-  return v;
+  CPY_FIELD(v, dims);
+  CPY_FIELD(v, offsets);
+  CPY_FIELD(v, strides);
 }

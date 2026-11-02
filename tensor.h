@@ -7,30 +7,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dat_buff.h"
 #include "num_types.h"
 #include "voodoo.h"
 
 typedef struct tensor_t {
-  f32* dat;
+  data_buff* buff;
+  // NOTE: is_view could be made into a flags field later to have less padding
+  bool is_view;
   u64 n_el;
   u64 rank;
   u64 dims[MAX_TENSOR_DIMS];
-  // offsets should always be 0
-  // the tensor always uses all of the underlying memory
-  // this is only needed for `param_t`
   u64 offsets[MAX_TENSOR_DIMS];
   u64 strides[MAX_TENSOR_DIMS];
 } tensor_t;
 
 tensor_t* make_tensor(u64 n_el) {
-  f32* dat = malloc(sizeof(f32) * n_el);
-  for (u64 i = 0; i < n_el; ++i) dat[i] = 1.0 * i;
-
   ALLOC_PTR(tensor_t, t);
-  memset(t, 0, sizeof(tensor_t));
 
+  t->buff = make_dat_buff(n_el);
   t->n_el = n_el;
-  t->dat = dat;
   t->rank = 1;
   t->dims[0] = n_el;
   t->strides[0] = 1;
@@ -39,57 +35,91 @@ tensor_t* make_tensor(u64 n_el) {
 }
 
 void destroy_tensor(tensor_t* t) {
-  free(t->dat);
+  dec_rc(t->buff);
   free(t);
-}
-
-void reshape_tensor(tensor_t* t, u64 r, const u64 dims[MAX_TENSOR_DIMS]) {
-  t->rank = r;
-
-  u64 acc = 1;
-  for (u64 dim = 0; dim < r; ++dim) {
-    acc *= dims[dim];
-    assert(acc <= t->n_el);
-
-    t->dims[dim] = dims[dim];
-    t->strides[dim] = t->n_el / acc;
-  }
-  assert(acc == t->n_el);
 }
 
 tensor_t* make_tensor_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   u64 n_el = 1;
   for (u64 i = 0; i < rank; ++i) n_el *= dims[i];
 
-  tensor_t* t = make_tensor(n_el);
-  reshape_tensor(t, rank, dims);
+  u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 acc = 1;
+  for (u64 dim = 0; dim < rank; ++dim) {
+    acc *= dims[dim];
+    _strides[dim] = n_el / acc;
+  }
+  assert(acc == n_el);
+
+  ALLOC_PTR(tensor_t, t);
+
+  t->buff = make_dat_buff(n_el);
+  t->n_el = n_el;
+  t->rank = rank;
+  u64* _dims = dims;
+  CPY_FIELD(t, dims);
+  CPY_FIELD(t, strides);
 
   return t;
 }
 
-#define MAKE_TENSOR_FROM_DIMS(t, dims...) tensor_t* t = make_tensor_from_shape(_VA_CNT(u64, dims), U_DIMS(dims))
-
 tensor_t* clone_tensor(tensor_t* t) {
-  tensor_t* t2 = make_tensor_from_shape(t->rank, t->dims);
-  memcpy(t2->dat, t->dat, sizeof(f32) * t->n_el);
-  return t2;
+  ALLOC_PTR(tensor_t, c);
+
+  c->buff = clone_data_buff(t->buff);
+  return c;
+}
+
+tensor_t* copy_tensor(tensor_t* t) {
+  inc_rc(t->buff);
+
+  ALLOC_PTR(tensor_t, c);
+  memcpy(c, t, sizeof(tensor_t));
+
+  return c;
 }
 
 u64 idx(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) {
-  u64 idx = 0;
-  for (u64 dim = 0; dim < t->rank; ++dim) {
-    u64 i = idxs[dim];
-    assert(i < t->dims[dim]);
-    idx += i * t->strides[dim];
-  }
+  i64 idx = 0;
+  for (u64 dim = 0; dim < t->rank; ++dim) idx += t->offsets[dim] + (t->strides[dim] * idxs[dim]);
 
-  assert(idx < t->n_el);
-  return idx;
+  assert(idx >= 0 && ((u64)idx) < t->buff->n_el);
+
+  return (u64)idx;
 }
 
-f32 tensor_get(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) { return t->dat[idx(t, idxs)]; }
-void tensor_set(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS], f32 val) { t->dat[idx(t, idxs)] = val; }
+f32 get(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) { return t->buff->data[idx(t, idxs)]; }
+void set(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS], f32 val) { t->buff->data[idx(t, idxs)] = val; }
 
 void fill(tensor_t* t, f32 val) {
-  for (u64 i = 0; i < t->n_el; ++i) t->dat[i] = val;
+  u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);
+  for (u64 idx = 0; idx < t->n_el; ++idx) {
+    IDX2IDXS(idx, idxs, t->rank, t->dims)
+    set(t, idxs, val);
+  }
+}
+
+tensor_t* make_contiguous(tensor_t* t) {
+  tensor_t* c = make_tensor_from_shape(t->rank, t->dims);
+
+  // Note: memcpy-ing contiguous parts might be better
+  u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);
+  for (u64 idx = 0; idx < t->n_el; ++idx) {
+    IDX2IDXS(idx, idxs, t->rank, t->dims)
+    set(c, idxs, get(t, idxs));
+  }
+
+  return c;
+}
+
+bool same_shape(tensor_t* a, tensor_t* b) {
+  u64 rank = a->rank;
+  if (rank != b->rank) return false;
+
+  u64* dims_a = a->dims;
+  u64* dims_b = b->dims;
+  for (u64 dim = 0; dim < rank; ++dim)
+    if (dims_a[dim] != dims_b[dim]) return false;
+
+  return true;
 }

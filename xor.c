@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#define FMT_PRINT_N_EL
+
 #include "fmt.h"
 #include "loss.h"
 #include "num_types.h"
@@ -21,38 +23,32 @@ f32* get_n_rand_f32(u64 n) {
   return rand_f32;
 }
 
-param_t* scuffed_linear(param_t* x, param_t* weight, param_t* bias) {
-  param_t* w_T = op_transpose(weight);
-  param_t* r = op_matmul(x, w_T);
-  destroy_param(w_T);
+tensor_t* scuffed_linear(tensor_t* x, tensor_t* weight, tensor_t* bias) {
+  tensor_t* w_T = op_transpose(weight);
+  tensor_t* r = op_matmul(x, w_T);
 
-  u64* dims_r = dims_(r);
-  assert(dims_r[1] == dims_(bias)[0]);
-
-  tensor_view_t* _s_r = slice(r->data.t, I_DIMS(0, 0), I_DIMS(0, -1), U_DIMS(1, 1));
-  param_t* s_r = make_param_from_view(_s_r);
-
-  param_t* bias_c = clone(bias);
-  reshape_tensor(bias_c->data.t, 2, U_DIMS(1, numel_(bias)));
+  u64* dims_r = r->dims;
+  assert(dims_r[1] == bias->dims[0]);
 
   for (u64 i = 0; i < dims_r[0]; ++i) {
-    _s_r->offsets[0] = i * dims_r[1];
+    tensor_t* s_r = op_slice(r, I_DIMS(i, 0), I_DIMS(i, -1), U_DIMS(1, 1));
+    op_reshape_(s_r, 1, U_DIMS(s_r->dims[1]));
     op_add_(s_r, bias);
   }
 
-  free(bias);
-  free(_s_r);
+  destroy_tensor(w_T);
+
   return r;
 }
 
-param_t* xor_forward(param_t* x, param_t* w1, param_t* b1, param_t* w2, param_t* b2) {
-  param_t* r = scuffed_linear(x, w1, b1);
+tensor_t* xor_forward(tensor_t* x, tensor_t* w1, tensor_t* b1, tensor_t* w2, tensor_t* b2) {
+  tensor_t* r = scuffed_linear(x, w1, b1);
 
   op_tanh_(r);
 
   {
-    param_t* tmp = scuffed_linear(r, w2, b2);
-    destroy_param(r);
+    tensor_t* tmp = scuffed_linear(r, w2, b2);
+    destroy_tensor(r);
     r = tmp;
   }
 
@@ -67,58 +63,66 @@ int main(void) {
 
   // FIXME: generate own random numbers
 #pragma region copied from a reference impl
-  MAKE_TENSOR_FROM_DIMS(_w1, 2, 2);
-  param_t* w1 = make_param_from_tensor(_w1);
-  set_(w1, U_DIMS(0, 0), -0.7014);
-  set_(w1, U_DIMS(0, 1), -0.6157);
-  set_(w1, U_DIMS(1, 0), -0.0192);
-  set_(w1, U_DIMS(1, 1), 0.7018);
+  tensor_t* w1 = make_tensor_from_shape(2, U_DIMS(2, 2));
+  set(w1, U_DIMS(0, 0), -0.7014);
+  set(w1, U_DIMS(0, 1), -0.6157);
+  set(w1, U_DIMS(1, 0), -0.0192);
+  set(w1, U_DIMS(1, 1), 0.7018);
 
-  MAKE_TENSOR_FROM_DIMS(_b1, 2);
-  param_t* b1 = make_param_from_tensor(_b1);
-  set_(b1, U_DIMS(0), -0.6502);
-  set_(b1, U_DIMS(1), 0.1630);
+  tensor_t* b1 = make_tensor_from_shape(1, U_DIMS(2));
+  set(b1, U_DIMS(0), -0.6502);
+  set(b1, U_DIMS(1), 0.1630);
 
-  MAKE_TENSOR_FROM_DIMS(_w2, 1, 2);
-  param_t* w2 = make_param_from_tensor(_w2);
+  tensor_t* w2 = make_tensor_from_shape(2, U_DIMS(1, 2));
+  set(w2, U_DIMS(0, 0), 0.5854);
+  set(w2, U_DIMS(0, 1), 0.1786);
 
-  set_(w2, U_DIMS(0, 0), 0.5854);
-  set_(w2, U_DIMS(0, 1), 0.1786);
-
-  MAKE_TENSOR_FROM_DIMS(_b2, 1);
-  param_t* b2 = make_param_from_tensor(_b2);
-  set_(b2, U_DIMS(0), 0.3463);
+  tensor_t* b2 = make_tensor_from_shape(1, U_DIMS(1));
+  set(b2, U_DIMS(0), 0.3463);
 #pragma endregion
 
-  MAKE_TENSOR_FROM_DIMS(_x, 4, 2);
-  fill(_x, 0.0);
+#pragma region input x
+  tensor_t* x = make_tensor_from_shape(2, U_DIMS(4, 2));
+  fill(x, 0.0);
+  set(x, U_DIMS(1, 1), 1.0);
+  set(x, U_DIMS(2, 0), 1.0);
+  set(x, U_DIMS(3, 0), 1.0);
+  set(x, U_DIMS(3, 1), 1.0);
+#pragma endregion
 
-  param_t* x = make_param_from_tensor(_x);
+#pragma region expected output y
+  tensor_t* y = make_tensor_from_shape(2, U_DIMS(4, 1));
+  fill(y, 0.0);
+  set(y, U_DIMS(1, 0), 1.0);
+  set(y, U_DIMS(2, 0), 1.0);
+#pragma endregion
 
-  set_(x, U_DIMS(1, 1), 1.0);
-  set_(x, U_DIMS(2, 0), 1.0);
-  set_(x, U_DIMS(3, 0), 1.0);
-  set_(x, U_DIMS(3, 1), 1.0);
+  for (u64 i = 0; i < EPOCHS; ++i) {
+    tensor_t* y_hat = xor_forward(x, w1, b1, w2, b2);
 
-  MAKE_TENSOR_FROM_DIMS(_y, 4, 1);
-  fill(_y, 0.0);
-  param_t* y = make_param_from_tensor(_y);
+    // if (i % 100 == 0) {
+    //   print_mat(y_hat);
+    //   printf("loss: %6.3f\n", calc_MSE_loss(y_hat, y));
+    // }
+    // TODO: backprop / grad
 
-  set_(y, U_DIMS(1, 0), 1.0);
-  set_(y, U_DIMS(2, 0), 1.0);
+    destroy_tensor(y_hat);
+  }
+
+  tensor_t* y_hat = xor_forward(x, w1, b1, w2, b2);
 
   print_mat(x);
   print_mat(y);
-  for (u64 i = 0; i < EPOCHS; ++i) {
-    param_t* y_hat = xor_forward(x, w1, b1, w2, b2);
+  print_mat(y_hat);
+  printf("loss: %6.3f\n", calc_MSE_loss(y_hat, y));
 
-    if (i % 100 == 0) {
-      print_mat(y_hat);
-
-      printf("loss: %6.3f\n", calc_MSE_loss(y_hat, y));
-    }
-    // TODO: backprop / grad
-  }
+  destroy_tensor(y_hat);
+  destroy_tensor(y);
+  destroy_tensor(x);
+  destroy_tensor(b2);
+  destroy_tensor(w2);
+  destroy_tensor(b1);
+  destroy_tensor(w1);
 
   return 0;
 }

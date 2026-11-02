@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <string.h>
+
 #include "num_types.h"
 
 #define SWAP(a, b) \
@@ -25,7 +27,11 @@
 
 #define _VA_CNT(type, args...) sizeof((type[]){args}) / sizeof(type)
 
-#define ALLOC_PTR(type, name) type* name = malloc(sizeof(type))
+#define MAKE_TENSOR_FROM_DIMS(t, dims...) tensor_t* t = make_tensor_from_shape(_VA_CNT(u64, dims), U_DIMS(dims))
+
+#define ALLOC_PTR(type, name)        \
+  type* name = malloc(sizeof(type)); \
+  memset(name, 0, sizeof(type))
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 
@@ -39,3 +45,15 @@
       i /= d;                           \
     }                                   \
   }
+
+#define PP_U64(buff, rank)                                                              \
+  printf("{ ");                                                                         \
+  for (u64 i = 0; i < (rank); ++i) printf("%s%" PRIu64, i == 0 ? "" : ", ", (buff)[i]); \
+  printf(" }\n");
+
+#define PP_FIELD(view, name, slug) \
+  printf(#slug ": ");              \
+  PP_U64((view)->name, (view)->rank);
+
+#define CPY_FIELD(dest, name) memcpy((dest)->name, _##name, sizeof((dest)->name))
+#define FILL_BUFF(buff, val) memset((buff), (val), sizeof((buff)))
