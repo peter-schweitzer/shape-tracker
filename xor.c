@@ -59,9 +59,9 @@ tensor_t* xor_forward(tensor_t* x, tensor_t* w1, tensor_t* b1, tensor_t* w2, ten
 
 int main(void) {
   const u64 EPOCHS = 1;  // 2500;
-  // const f32 LR = 0.1;
+  const f32 LR = 0.1;
 
-  // FIXME: generate own random numbers
+  // TODO: generate own random numbers
 #pragma region copied from a reference impl
   tensor_t* w1 = make_tensor_from_shape(2, U_DIMS(2, 2));
   set(w1, U_DIMS(0, 0), -0.7014);
@@ -92,21 +92,62 @@ int main(void) {
 
 #pragma region expected output y
   tensor_t* y = make_tensor_from_shape(2, U_DIMS(4, 1));
-  fill(y, 0.0);
+  fill(y, -1.0);
   set(y, U_DIMS(1, 0), 1.0);
   set(y, U_DIMS(2, 0), 1.0);
 #pragma endregion
 
   for (u64 i = 0; i < EPOCHS; ++i) {
-    tensor_t* y_hat = xor_forward(x, w1, b1, w2, b2);
+    tensor_t* hidden = scuffed_linear(x, w1, b1);
+    op_tanh_(hidden);
 
-    // if (i % 100 == 0) {
-    //   print_mat(y_hat);
-    //   printf("loss: %6.3f\n", calc_MSE_loss(y_hat, y));
-    // }
+    tensor_t* y_hat = scuffed_linear(hidden, w2, b2);
+    op_tanh_(y_hat);
+
+    if (i % 100 == 0) {
+      print_mat(y_hat);
+      printf("loss: %6.3f\n", calc_MSE_loss(y_hat, y));
+    }
+
+    op_reshape_(y_hat, 2, U_DIMS(4, 1));
+
     // TODO: backprop / grad
-
+    // --- BACKWARD PASS ---
+    // Error term (delta) at the output layer
+    tensor_t* error_output = op_sub(y_hat, y);
+    op_tanh_dv_(y_hat);
+    tensor_t* delta_output = op_mul(error_output, y_hat);
+    destroy_tensor(error_output);
     destroy_tensor(y_hat);
+
+    // Error term (delta) passed back to hidden layer
+    tensor_t* error_hidden = op_matmul(delta_output, w2);
+    tensor_t* delta_hidden = op_mul(error_hidden, op_tanh_dv(hidden));
+    destroy_tensor(error_hidden);
+
+    // --- GRADIENTS & PARAMETER UPDATES ---
+    op_transpose_(hidden);
+    tensor_t* hidden_d_output = op_matmul(hidden, delta_output);
+    op_transpose_(hidden_d_output);
+    op_mul_s_(hidden_d_output, LR);
+    op_sub_(w2, hidden_d_output);
+
+    destroy_tensor(hidden_d_output);
+    destroy_tensor(delta_output);
+    destroy_tensor(hidden);
+
+    // b2 -= LR * np.sum(delta_output, axis=0, keepdims=True)
+
+    PRINT_NAMED_META(x);
+    PRINT_NAMED_META(delta_hidden);
+    tensor_t* X_d_hidden = op_matmul(x, delta_hidden);
+    op_mul_s_(X_d_hidden, LR);
+    op_sub_(w1, X_d_hidden);
+
+    destroy_tensor(X_d_hidden);
+    destroy_tensor(delta_hidden);
+
+    // b1 -= LR * np.sum(delta_hidden, axis=0, keepdims=True)
   }
 
   tensor_t* y_hat = xor_forward(x, w1, b1, w2, b2);

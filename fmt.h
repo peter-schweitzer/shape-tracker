@@ -20,7 +20,7 @@ void print_meta(tensor_t* t) {
 }
 
 void print_meta_with_name(tensor_t* t, const char* name) {
-  printf("tensor \"%s\"%s\n", name, t->is_view ? " (view)" : "");
+  printf("tensor \"%s\" (%s)\n", name, t->is_view ? "view" : "contiguous");
   print_meta(t);
 }
 
@@ -38,7 +38,7 @@ void print(tensor_t* t) {
 void print_mat(tensor_t* t) {
   assert(t->rank == 2);
 
-  printf("Matrix [%" PRIu64 " x %" PRIu64 "]\n\n", t->dims[0], t->dims[1]);
+  printf("Matrix [%" PRIu64 " x %" PRIu64 "] (%s)\n\n", t->dims[0], t->dims[1], t->is_view ? "view" : "contiguous");
 
   u64 idx[MAX_TENSOR_DIMS] = {0, 0, 0, 0};
   for (u64 y = 0; y < t->dims[0]; ++y) {

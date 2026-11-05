@@ -55,5 +55,7 @@
   printf(#slug ": ");              \
   PP_U64((view)->name, (view)->rank);
 
+#define PRINT_NAMED_META(t) print_meta_with_name(t, #t)
+
 #define CPY_FIELD(dest, name) memcpy((dest)->name, _##name, sizeof((dest)->name))
 #define FILL_BUFF(buff, val) memset((buff), (val), sizeof((buff)))
