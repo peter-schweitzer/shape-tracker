@@ -14,18 +14,14 @@
   u64* dims = p->dims
 
 #define GEN_UNARY_OUT_OF_PLACE_OP(name) \
-  tensor_t* name(tensor_t* p) {         \
-    tensor_t* c = copy_tensor(p);       \
-    name##_(c);                         \
-    return c;                           \
-  }
+  tensor_t* name(tensor_t* p) { return name##_(clone_tensor(p)); }
 
-#define GEN_BINARY_OUT_OF_PLACE_OP(name)     \
-  tensor_t* name(tensor_t* a, tensor_t* b) { \
-    tensor_t* c = copy_tensor(a);            \
-    name##_(c, b);                           \
-    return c;                                \
-  }
+#define GEN_BINARY_OUT_OF_PLACE_OP(name) \
+  tensor_t* name(tensor_t* a, tensor_t* b) { return name##_(clone_tensor(a), b); }
+
+#define GEN_BINARY_SCALAR_OUT_OF_PLACE_OP(name) \
+  tensor_t* name(tensor_t* a, f32 b) { return name##_(clone_tensor(a), b); }
+
 #pragma endregion
 
 #pragma region UNARY_ELEMENTWISE_FUNC_OPS
@@ -42,7 +38,7 @@
   _(abs, ABS)
 
 #define _(name, op)                         \
-  void op_##name##_(tensor_t* p) {          \
+  tensor_t* op_##name##_(tensor_t* p) {     \
     LOAD_TENSOR_META(p);                    \
                                             \
     u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);    \
@@ -52,6 +48,8 @@
       f32 v = get(p, idxs);                 \
       set(p, idxs, op(v));                  \
     }                                       \
+                                            \
+    return p;                               \
   }                                         \
                                             \
   GEN_UNARY_OUT_OF_PLACE_OP(op_##name)
@@ -66,7 +64,7 @@ UNARY_ELEMENTWISE_FUNC_OPS(_)
   _(neg, -)
 
 #define _(name, op)                         \
-  void op_##name##_(tensor_t* p) {          \
+  tensor_t* op_##name##_(tensor_t* p) {     \
     LOAD_TENSOR_META(p);                    \
                                             \
     u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);    \
@@ -76,6 +74,8 @@ UNARY_ELEMENTWISE_FUNC_OPS(_)
       f32 v = get(p, idxs);                 \
       set(p, idxs, (op v));                 \
     }                                       \
+                                            \
+    return p;                               \
   }                                         \
                                             \
   GEN_UNARY_OUT_OF_PLACE_OP(op_##name)
@@ -89,22 +89,24 @@ UNARY_ELEMENTWISE_OP_OPS(_)
   /* name | function */                \
   _(pow, powf)
 
-#define _(name, op)                             \
-  void op_##name##_(tensor_t* a, tensor_t* b) { \
-    assert(same_shape(a, b));                   \
-                                                \
-    LOAD_TENSOR_META(a);                        \
-                                                \
-    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);        \
-    for (u64 idx = 0; idx < numel; ++idx) {     \
-      IDX2IDXS(idx, idxs, rank, dims)           \
-                                                \
-      f32 v_a = get(a, idxs);                   \
-      f32 v_b = get(b, idxs);                   \
-      set(a, idxs, op(v_a, v_b));               \
-    }                                           \
-  }                                             \
-                                                \
+#define _(name, op)                                  \
+  tensor_t* op_##name##_(tensor_t* a, tensor_t* b) { \
+    assert(same_shape(a, b));                        \
+                                                     \
+    LOAD_TENSOR_META(a);                             \
+                                                     \
+    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);             \
+    for (u64 idx = 0; idx < numel; ++idx) {          \
+      IDX2IDXS(idx, idxs, rank, dims)                \
+                                                     \
+      f32 v_a = get(a, idxs);                        \
+      f32 v_b = get(b, idxs);                        \
+      set(a, idxs, op(v_a, v_b));                    \
+    }                                                \
+                                                     \
+    return a;                                        \
+  }                                                  \
+                                                     \
   GEN_BINARY_OUT_OF_PLACE_OP(op_##name)
 
 BINARY_ELEMENTWISE_FUNC_OPS(_)
@@ -120,22 +122,24 @@ BINARY_ELEMENTWISE_FUNC_OPS(_)
   _(mul, *)                          \
   _(divide, /)
 
-#define _(name, op)                             \
-  void op_##name##_(tensor_t* a, tensor_t* b) { \
-    assert(same_shape(a, b));                   \
-                                                \
-    LOAD_TENSOR_META(a);                        \
-                                                \
-    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);        \
-    for (u64 idx = 0; idx < numel; ++idx) {     \
-      IDX2IDXS(idx, idxs, rank, dims)           \
-                                                \
-      f32 v_a = get(a, idxs);                   \
-      f32 v_b = get(b, idxs);                   \
-      set(a, idxs, (v_a op v_b));               \
-    }                                           \
-  }                                             \
-                                                \
+#define _(name, op)                                  \
+  tensor_t* op_##name##_(tensor_t* a, tensor_t* b) { \
+    assert(same_shape(a, b));                        \
+                                                     \
+    LOAD_TENSOR_META(a);                             \
+                                                     \
+    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);             \
+    for (u64 idx = 0; idx < numel; ++idx) {          \
+      IDX2IDXS(idx, idxs, rank, dims)                \
+                                                     \
+      f32 v_a = get(a, idxs);                        \
+      f32 v_b = get(b, idxs);                        \
+      set(a, idxs, (v_a op v_b));                    \
+    }                                                \
+                                                     \
+    return a;                                        \
+  }                                                  \
+                                                     \
   GEN_BINARY_OUT_OF_PLACE_OP(op_##name)
 
 BINARY_ELEMENTWISE_OP_OPS(_)
@@ -196,7 +200,7 @@ f32 op_mean(tensor_t* p) { return op_sum(p) / p->n_el; }
 #pragma endregion
 
 #pragma region custom inplace with gen out of place
-void op_sqr_(tensor_t* p) {
+tensor_t* op_sqr_(tensor_t* p) {
   LOAD_TENSOR_META(p);
 
   u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);
@@ -206,24 +210,28 @@ void op_sqr_(tensor_t* p) {
     f32 v = get(p, idxs);
     set(p, idxs, (v * v));
   }
+
+  return p;
 }
 
 GEN_UNARY_OUT_OF_PLACE_OP(op_sqr)
 
-void op_transpose_(tensor_t* t) {
+tensor_t* op_transpose_(tensor_t* t) {
   u64 r = t->rank;
   assert(r >= 2);
 
   SWAP(t->dims[r - 2], t->dims[r - 1]);
   SWAP(t->offsets[r - 2], t->offsets[r - 1]);
   SWAP(t->strides[r - 2], t->strides[r - 1]);
+
+  return t;
 }
 
 GEN_UNARY_OUT_OF_PLACE_OP(op_transpose)
 #pragma endregion
 
 #pragma region idk slice and reshape i guess
-void op_slice_(tensor_t* t, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) {
+tensor_t* op_slice_(tensor_t* t, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) {
   u64 _n_el = 1;
   u64 _dims[MAX_TENSOR_DIMS] = DIMS(0);
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
@@ -264,15 +272,13 @@ void op_slice_(tensor_t* t, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS]
   CPY_FIELD(t, dims);
   CPY_FIELD(t, offsets);
   CPY_FIELD(t, strides);
+
+  return t;
 }
 
-tensor_t* op_slice(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) {
-  tensor_t* r = copy_tensor(p);
-  op_slice_(r, froms, tos, strides);
-  return r;
-}
+tensor_t* op_slice(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) { return op_slice_(copy_tensor(p), froms, tos, strides); }
 
-void op_reshape_(tensor_t* t, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
+tensor_t* op_reshape_(tensor_t* t, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
   u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
 
@@ -317,6 +323,8 @@ void op_reshape_(tensor_t* t, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   CPY_FIELD(t, dims);
   CPY_FIELD(t, offsets);
   CPY_FIELD(t, strides);
+
+  return t;
 }
 
 tensor_t* op_reshape(tensor_t* t, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
