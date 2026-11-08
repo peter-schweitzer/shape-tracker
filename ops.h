@@ -84,6 +84,32 @@ UNARY_ELEMENTWISE_OP_OPS(_)
 #undef _
 #pragma endregion
 
+#pragma region UNARY_ELEMENTWISE_MACRO_OPS
+#define UNARY_ELEMENTWISE_MACRO_OPS(_) \
+  /* name | op */                      \
+  _(tanh_dv, (1.0 - v * v))
+
+#define _(name, op)                         \
+  tensor_t* op_##name##_(tensor_t* p) {     \
+    LOAD_TENSOR_META(p);                    \
+                                            \
+    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);    \
+    for (u64 idx = 0; idx < numel; ++idx) { \
+      IDX2IDXS(idx, idxs, rank, dims)       \
+                                            \
+      f32 v = get(p, idxs);                 \
+      set(p, idxs, (op));                   \
+    }                                       \
+                                            \
+    return p;                               \
+  }                                         \
+                                            \
+  GEN_UNARY_OUT_OF_PLACE_OP(op_##name)
+
+UNARY_ELEMENTWISE_MACRO_OPS(_)
+#undef _
+#pragma endregion
+
 #pragma region BINARY_ELEMENTWISE_FUNC_OPS
 #define BINARY_ELEMENTWISE_FUNC_OPS(_) \
   /* name | function */                \
@@ -143,6 +169,36 @@ BINARY_ELEMENTWISE_FUNC_OPS(_)
   GEN_BINARY_OUT_OF_PLACE_OP(op_##name)
 
 BINARY_ELEMENTWISE_OP_OPS(_)
+#undef _
+#pragma endregion
+
+#pragma region BINARY_SCALAR_OP_OPS
+#define BINARY_SCALAR_OP_OPS(_) \
+  /* name | function */         \
+  _(add_s, +)                   \
+  _(sub_s, -)                   \
+  _(mul_s, *)                   \
+  _(div_s, /)
+
+#define _(name, op)                            \
+  tensor_t* op_##name##_(tensor_t* a, f32 b) { \
+    LOAD_TENSOR_META(a);                       \
+                                               \
+    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);       \
+    for (u64 idx = 0; idx < numel; ++idx) {    \
+      IDX2IDXS(idx, idxs, rank, dims)          \
+                                               \
+      f32 v_a = get(a, idxs);                  \
+      set(a, idxs, (v_a op b));                \
+    }                                          \
+                                               \
+    return a;                                  \
+  }                                            \
+                                               \
+  GEN_BINARY_SCALAR_OUT_OF_PLACE_OP(op_##name)
+
+BINARY_SCALAR_OP_OPS(_)
+
 #undef _
 #pragma endregion
 
