@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string.h>
+#include <math.h>
 
 #include "fmt.h"
 #include "num_types.h"

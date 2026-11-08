@@ -1,11 +1,11 @@
-/**
- * This is voodoo.
- * The question is, is this too much.
- * [...]
- * Is this too much voodoo for the next ten centuries?
- *
- * ~ Terry A. Davis
- */
+/*
+  This is voodoo.
+  The question is, is this too much.
+  [...]
+  Is this too much voodoo for the next ten centuries?
+
+  ~ Terry A. Davis
+*/
 
 #pragma once
 
