@@ -51,9 +51,13 @@
   for (u64 i = 0; i < (rank); ++i) printf("%s%" PRIu64, i == 0 ? "" : ", ", (buff)[i]); \
   printf(" }\n");
 
-#define PP_FIELD(view, name, slug) \
-  printf(#slug ": ");              \
-  PP_U64((view)->name, (view)->rank);
+#define PP_FIELD(t, name, slug) \
+  printf(#slug ": ");           \
+  PP_U64((t)->name, (t)->rank);
+
+#define PRINT_NAMED_META(t) print_meta_with_name(t, #t)
+#define PRINT_NAMED(t) print_with_name(t, #t)
+#define PRINT_NAMED_MAT(t) print_mat_with_name(t, #t)
 
 #define CPY_FIELD(dest, name) memcpy((dest)->name, _##name, sizeof((dest)->name))
 #define FILL_BUFF(buff, val) memset((buff), (val), sizeof((buff)))
