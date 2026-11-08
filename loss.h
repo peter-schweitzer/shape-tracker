@@ -6,10 +6,9 @@
 
 // Mean Squared Error
 f32 calc_MSE_loss(tensor_t* y_hat, tensor_t* y) {
-  tensor_t* d = op_sub(y_hat, y);
-  op_sqr_(d);
-  f32 loss = op_mean(d);
-  destroy_tensor(d);
+  tensor_t* delta_y = op_sub(y_hat, y);
+  f32 loss = op_mean(op_sqr_(delta_y));
+  destroy_tensor(delta_y);
 
   return loss;
 }
