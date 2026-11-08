@@ -65,8 +65,9 @@ tensor_t* make_tensor_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
 
 tensor_t* clone_tensor(tensor_t* t) {
   ALLOC_PTR(tensor_t, c);
-
+  memcpy(c, t, sizeof(tensor_t));
   c->buff = clone_data_buff(t->buff);
+
   return c;
 }
 
