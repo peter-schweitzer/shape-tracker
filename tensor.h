@@ -121,3 +121,18 @@ bool same_shape(tensor_t* a, tensor_t* b) {
 
   return true;
 }
+
+bool is_same(tensor_t* a, tensor_t* b) {
+  if (!same_shape(a, b)) return false;
+
+  u64 n = a->n_el;
+  u64 rank = a->rank;
+
+  u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);
+  for (u64 idx = 0; idx < n; ++idx) {
+    IDX2IDXS(idx, idxs, rank, a->dims)
+    if (get(a, idxs) != get(b, idxs)) return false;
+  }
+
+  return true;
+}

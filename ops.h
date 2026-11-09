@@ -35,6 +35,7 @@
   _(tanh, tanhf)                                          \
   _(sqrt, sqrtf)                                          \
   _(log, logf)                                            \
+  _(round, roundf)                                        \
   _(abs, ABS)
 
 #define _(name, op)                         \
