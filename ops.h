@@ -7,6 +7,9 @@
 #include "tensor.h"
 #include "voodoo.h"
 
+#define SQRT_2_DIV_PI 0.79788456080286535587989211986876f  // 0.797884583473205566f
+#define GELU_COEFF 0.044715f
+
 #pragma region macros
 #define LOAD_TENSOR_META(p) \
   u64 numel = p->n_el;      \
@@ -36,6 +39,7 @@
   _(sqrt, sqrtf)                                          \
   _(log, logf)                                            \
   _(round, roundf)                                        \
+  _(exp, expf)                                            \
   _(abs, ABS)
 
 #define _(name, op)                         \
@@ -86,11 +90,19 @@ UNARY_ELEMENTWISE_OP_OPS(_)
 #pragma endregion
 
 #pragma region UNARY_ELEMENTWISE_MACRO_OPS
-#define UNARY_ELEMENTWISE_MACRO_OPS(_) \
-  /* name | op */                      \
-  _(tanh_dv, (1.0 - v * v))
+#define UNARY_ELEMENTWISE_MACRO_OPS(_)                                                    \
+  /* name | op */                                                                         \
+  _(sqr, (v * v))                                                                         \
+  _(tanh_dv, (1.0 - v * v))                                                               \
+  _(step, (v >= 0.0f ? 1.0f : 0.0f))                                                      \
+  _(sigmoid, (1.0f / (1.0f + expf(-v))))                                                  \
+  _(hard_sigmoid, (fminf(1.0f, fmaxf(0.0f, (v + 3.0f) / 6.0f))))                          \
+  _(relu, (v > 0.0f ? v : 0.0f))                                                          \
+  _(silu, (v / (1.0f + expf(-v))))                                                        \
+  /*GELU(x) ≈ 0.5x(1+tanh[√(2/π)(x+0.044715x^3)]) = 0.5x(1+tanh[√(2/π)x(1+0.044715x²)])*/ \
+  _(gelu, (0.5f * v * (1.0f + tanhf(SQRT_2_DIV_PI * v * (1 + GELU_COEFF * v * v)))))
 
-#define _(name, op)                         \
+#define _(name, macro)                      \
   tensor_t* op_##name##_(tensor_t* p) {     \
     LOAD_TENSOR_META(p);                    \
                                             \
@@ -99,7 +111,7 @@ UNARY_ELEMENTWISE_OP_OPS(_)
       IDX2IDXS(idx, idxs, rank, dims)       \
                                             \
       f32 v = get(p, idxs);                 \
-      set(p, idxs, (op));                   \
+      set(p, idxs, macro);                  \
     }                                       \
                                             \
     return p;                               \
@@ -257,45 +269,35 @@ f32 op_mean(tensor_t* p) { return op_sum(p) / p->n_el; }
 #pragma endregion
 
 #pragma region custom inplace with gen out of place
-tensor_t* op_sqr_(tensor_t* p) {
-  LOAD_TENSOR_META(p);
+tensor_t* op_transpose_(tensor_t* p) {
+  u64 r = p->rank;
+  assert(r >= 2);
 
-  u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);
-  for (u64 idx = 0; idx < numel; ++idx) {
-    IDX2IDXS(idx, idxs, rank, dims)
-
-    f32 v = get(p, idxs);
-    set(p, idxs, (v * v));
-  }
+  SWAP(p->dims[r - 2], p->dims[r - 1]);
+  SWAP(p->offsets[r - 2], p->offsets[r - 1]);
+  SWAP(p->strides[r - 2], p->strides[r - 1]);
 
   return p;
 }
 
-GEN_UNARY_OUT_OF_PLACE_OP(op_sqr)
-
-tensor_t* op_transpose_(tensor_t* t) {
-  u64 r = t->rank;
-  assert(r >= 2);
-
-  SWAP(t->dims[r - 2], t->dims[r - 1]);
-  SWAP(t->offsets[r - 2], t->offsets[r - 1]);
-  SWAP(t->strides[r - 2], t->strides[r - 1]);
-
-  return t;
+tensor_t* op_softmax_(tensor_t* p) {
+  op_exp_(p);
+  return op_div_s_(p, op_sum(p));
 }
 
 GEN_UNARY_OUT_OF_PLACE_OP(op_transpose)
+GEN_UNARY_OUT_OF_PLACE_OP(op_softmax)
 #pragma endregion
 
-#pragma region idk slice and reshape i guess
-tensor_t* op_slice_(tensor_t* t, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) {
+#pragma region slice and reshape
+tensor_t* op_slice_(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) {
   u64 _n_el = 1;
   u64 _dims[MAX_TENSOR_DIMS] = DIMS(0);
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
   u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
 
-  for (u64 dim = 0; dim < t->rank; ++dim) {
-    u64 d = t->dims[dim];
+  for (u64 dim = 0; dim < p->rank; ++dim) {
+    u64 d = p->dims[dim];
 
     i64 from = froms[dim];
     assert(from < 0 ? (u64)(-from) <= d : (u64)(from) < d);
@@ -319,32 +321,32 @@ tensor_t* op_slice_(tensor_t* t, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_
     _n_el *= d_s;
     _dims[dim] = d_s;
 
-    u64 s_t = t->strides[dim];
-    _offsets[dim] = t->offsets[dim] + (offset * s_t);
+    u64 s_t = p->strides[dim];
+    _offsets[dim] = p->offsets[dim] + (offset * s_t);
     _strides[dim] = stride * s_t;
   }
 
-  t->n_el = _n_el;
-  t->is_view = true;
-  CPY_FIELD(t, dims);
-  CPY_FIELD(t, offsets);
-  CPY_FIELD(t, strides);
+  p->n_el = _n_el;
+  p->is_view = true;
+  CPY_FIELD(p, dims);
+  CPY_FIELD(p, offsets);
+  CPY_FIELD(p, strides);
 
-  return t;
+  return p;
 }
 
 tensor_t* op_slice(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) { return op_slice_(copy_tensor(p), froms, tos, strides); }
 
-tensor_t* op_reshape_(tensor_t* t, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
+tensor_t* op_reshape_(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
   u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
 
-  if (t->is_view) {
+  if (p->is_view) {
     u64 dims_t[MAX_TENSOR_DIMS] = DIMS(0);
     u64 r_t = 0;
-    for (u64 dim = 0; dim < t->rank; ++dim) {
-      _offsets[r_t] += t->offsets[dim];
-      if (t->dims[dim] > 1) dims_t[r_t++] = t->dims[dim];
+    for (u64 dim = 0; dim < p->rank; ++dim) {
+      _offsets[r_t] += p->offsets[dim];
+      if (p->dims[dim] > 1) dims_t[r_t++] = p->dims[dim];
     }
 
     if (r_t == 0) {
@@ -370,31 +372,31 @@ tensor_t* op_reshape_(tensor_t* t, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
     u64 acc = 1;
     for (u64 dim = 0; dim < rank; ++dim) {
       acc *= dims[dim];
-      _strides[dim] = t->n_el / acc;
+      _strides[dim] = p->n_el / acc;
     }
-    assert(acc == t->n_el);
+    assert(acc == p->n_el);
   }
 
-  t->rank = rank;
+  p->rank = rank;
   u64* _dims = dims;
-  CPY_FIELD(t, dims);
-  CPY_FIELD(t, offsets);
-  CPY_FIELD(t, strides);
+  CPY_FIELD(p, dims);
+  CPY_FIELD(p, offsets);
+  CPY_FIELD(p, strides);
 
-  return t;
+  return p;
 }
 
-tensor_t* op_reshape(tensor_t* t, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
+tensor_t* op_reshape(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   tensor_t* r;
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
   u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
 
-  if (t->is_view) {
+  if (p->is_view) {
     u64 dims_t[MAX_TENSOR_DIMS] = DIMS(0);
     u64 r_t = 0;
-    for (u64 dim = 0; dim < t->rank; ++dim) {
+    for (u64 dim = 0; dim < p->rank; ++dim) {
       _offsets[r_t] += dims_t[dim];
-      if (t->dims[dim] > 1) dims_t[r_t++] = dims[dim];
+      if (p->dims[dim] > 1) dims_t[r_t++] = dims[dim];
     }
 
     if (r_t == 0) {
@@ -405,32 +407,32 @@ tensor_t* op_reshape(tensor_t* t, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
     u64 dims_r[MAX_TENSOR_DIMS] = DIMS(0);
     u64 r_r = 0;
     for (u64 dim = 0; dim < rank; ++dim)
-      if (t->dims[dim] > 1) dims_r[r_r++] = dims[dim];
+      if (p->dims[dim] > 1) dims_r[r_r++] = dims[dim];
 
     if (r_t != r_r) {
-      r = make_contiguous(t);
+      r = make_contiguous(p);
       FILL_BUFF(_offsets, 0);
       goto reshape;
     }
 
     for (u64 dim = 0; dim < r_r; ++dim)
       if (dims_t[dim] != dims_r[dim]) {
-        r = make_contiguous(t);
+        r = make_contiguous(p);
         FILL_BUFF(_offsets, 0);
         goto reshape;
       }
   }
 
-  r = copy_tensor(t);
+  r = copy_tensor(p);
 
 reshape:
   {
     u64 acc = 1;
     for (u64 dim = 0; dim < rank; ++dim) {
       acc *= dims[dim];
-      _strides[dim] = t->n_el / acc;
+      _strides[dim] = p->n_el / acc;
     }
-    assert(acc == t->n_el);
+    assert(acc == p->n_el);
   }
 
   r->rank = rank;
@@ -487,17 +489,10 @@ tensor_t* op_matmul(tensor_t* a, tensor_t* b) {
 /**
  * TODO: impl the following ops
  *
- * STEP          "step"          // R = step(X)
- * SOFTMAX       "softmax"       // R = softmax(X)
  * SOFTMAX_DV    "softmax'"      // R = softmax'(X)
- * SIGMOID       "sigmoid"       // R = sigmoid(X)
  * SIGMOID_DV    "sigmoid'"      // R = sigmoid'(X)
- * HARD_SIGMOID  "hard_sigmoid"  // R = hard_sigmoid(X)
- * SILU          "SiLU"          // R = silu(X)
  * SILU_DV       "SiLU'"         // R = silu'(X)
- * RELU          "ReLU"          // R = relu(X)
  * RELU_DV       "ReLU'"         // R = relu'(X)
- * GELU          "GeLU"          // R = gelu(X)
  * GELU_DV       "GeLU'"         // R = gelu'(X)
  * ADDS          "+ξ"            // R = X+ξ
  * SUBS          "-ξ"            // R = X-ξ
