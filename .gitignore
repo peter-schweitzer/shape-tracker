@@ -1,2 +1,6 @@
 shapetracker
 xor
+
+# tests
+tests/out/*
+!tests/out/.GITKEEP
