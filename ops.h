@@ -28,18 +28,18 @@
 #pragma endregion
 
 #pragma region UNARY_ELEMENTWISE_FUNC_OPS
-#define UNARY_ELEMENTWISE_FUNC_OPS(_)                     \
-  /* name | function (or function macro like with ABS) */ \
-  _(sin, sinf)                                            \
-  _(cos, cosf)                                            \
-  _(tan, tanf)                                            \
-  _(sinh, sinhf)                                          \
-  _(cosh, coshf)                                          \
-  _(tanh, tanhf)                                          \
-  _(sqrt, sqrtf)                                          \
-  _(log, logf)                                            \
-  _(round, roundf)                                        \
-  _(exp, expf)                                            \
+#define UNARY_ELEMENTWISE_FUNC_OPS(_) \
+  /* name | op */                     \
+  _(sin, sinf)                        \
+  _(cos, cosf)                        \
+  _(tan, tanf)                        \
+  _(sinh, sinhf)                      \
+  _(cosh, coshf)                      \
+  _(tanh, tanhf)                      \
+  _(sqrt, sqrtf)                      \
+  _(log, logf)                        \
+  _(round, roundf)                    \
+  _(exp, expf)                        \
   _(abs, ABS)
 
 #define _(name, op)                         \
@@ -125,7 +125,7 @@ UNARY_ELEMENTWISE_MACRO_OPS(_)
 
 #pragma region BINARY_ELEMENTWISE_FUNC_OPS
 #define BINARY_ELEMENTWISE_FUNC_OPS(_) \
-  /* name | function */                \
+  /* name | op */                      \
   _(pow, powf)
 
 #define _(name, op)                                  \
@@ -187,7 +187,7 @@ BINARY_ELEMENTWISE_OP_OPS(_)
 
 #pragma region BINARY_SCALAR_OP_OPS
 #define BINARY_SCALAR_OP_OPS(_) \
-  /* name | function */         \
+  /* name | op */               \
   _(add_s, +)                   \
   _(sub_s, -)                   \
   _(mul_s, *)                   \
@@ -216,9 +216,9 @@ BINARY_SCALAR_OP_OPS(_)
 #pragma endregion
 
 #pragma region REDUCE_FUNC_OPS
-#define REDUCE_FUNC_OPS(_)                  \
-  /* name | function | initial acc value */ \
-  _(min, fminf, INFINITY)                   \
+#define REDUCE_FUNC_OPS(_)            \
+  /* name | op | initial acc value */ \
+  _(min, fminf, INFINITY)             \
   _(max, fmaxf, -INFINITY)
 
 #define _(name, op, acc_init)               \
@@ -489,13 +489,9 @@ tensor_t* op_matmul(tensor_t* a, tensor_t* b) {
 /**
  * TODO: impl the following ops
  *
- * SOFTMAX_DV    "softmax'"      // R = softmax'(X)
- * SIGMOID_DV    "sigmoid'"      // R = sigmoid'(X)
- * SILU_DV       "SiLU'"         // R = silu'(X)
- * RELU_DV       "ReLU'"         // R = relu'(X)
- * GELU_DV       "GeLU'"         // R = gelu'(X)
- * ADDS          "+ξ"            // R = X+ξ
- * SUBS          "-ξ"            // R = X-ξ
- * MULS          "*ξ"            // R = X*ξ (Hadamard product)
- * DIVS          "/ξ"            // R = X/ξ
+ * SOFTMAX_DV   "softmax'"   // R = softmax'(X)
+ * SIGMOID_DV   "sigmoid'"   // R = sigmoid'(X)
+ * SILU_DV      "SiLU'"      // R = silu'(X)
+ * RELU_DV      "ReLU'"      // R = relu'(X)
+ * GELU_DV      "GeLU'"      // R = gelu'(X)
  */
