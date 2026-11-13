@@ -8,8 +8,11 @@
 #include "tensor.h"
 #include "voodoo.h"
 
-#define SQRT_2_DIV_PI 0.79788456080286535587989211986876f  // 0.797884583473205566f
-#define GELU_COEFF 0.044715f
+#pragma region constants
+#define SQRT_2_DIV_PI 0.79788456080286535587989211986876f  // actual: 0.797884583473205566f
+#define GELU_COEFF 0.044715f                               // actual: 0.0447149984538555145f
+#define INV_SQRT_2 0.7071067811865475f                     // actual: 0.70710676908493042f
+#pragma endregion
 
 #pragma region macros
 #define LOAD_FIELD(p, field) typeof(_Generic((p)->field, u64*: (u64*)(p)->field, default: (p)->field)) field = (p)->field
@@ -93,17 +96,21 @@ UNARY_ELEMENTWISE_OP_OPS(_)
 #pragma endregion
 
 #pragma region UNARY_ELEMENTWISE_MACRO_OPS
-#define UNARY_ELEMENTWISE_MACRO_OPS(_)                                                    \
-  /* name | op */                                                                         \
-  _(sqr, (v * v))                                                                         \
-  _(tanh_dv, (1.0 - v * v))                                                               \
-  _(step, (v >= 0.0f ? 1.0f : 0.0f))                                                      \
-  _(sigmoid, (1.0f / (1.0f + expf(-v))))                                                  \
-  _(hard_sigmoid, (fminf(1.0f, fmaxf(0.0f, (v + 3.0f) / 6.0f))))                          \
-  _(relu, (v > 0.0f ? v : 0.0f))                                                          \
-  _(silu, (v / (1.0f + expf(-v))))                                                        \
-  /*GELU(x) ≈ 0.5x(1+tanh[√(2/π)(x+0.044715x^3)]) = 0.5x(1+tanh[√(2/π)x(1+0.044715x²)])*/ \
-  _(gelu, (0.5f * v * (1.0f + tanhf(SQRT_2_DIV_PI * v * (1 + GELU_COEFF * v * v)))))
+#define UNARY_ELEMENTWISE_MACRO_OPS(_)                                                       \
+  /* name | op */                                                                            \
+  _(sqr, (v * v))                                                                            \
+  _(tanh_dv, (1.0 - v * v))                                                                  \
+  _(step, (v >= 0.0f ? 1.0f : 0.0f))                                                         \
+  _(sigmoid, (1.0f / (1.0f + expf(-v))))                                                     \
+  _(hard_sigmoid, (fminf(1.0f, fmaxf(0.0f, (v + 3.0f) / 6.0f))))                             \
+  _(relu, (v > 0.0f ? v : 0.0f))                                                             \
+  _(silu, (v / (1.0f + expf(-v))))                                                           \
+  /* GELU(x) = 0.5x[1+erf(x/√2)] = 0.5x[1+erf((1/√2)·x)] */                                  \
+  _(gelu, (0.5f * v * (1.0f + erff(INV_SQRT_2 * v))))                                        \
+  /* GELU(x) ≃ 0.5x(1+tanh[√(2/π)(x+0.044715x^3)]) = 0.5x(1+tanh[√(2/π)·x(1+0.044715x²)]) */ \
+  _(fast_gelu, (0.5f * v * (1.0f + tanhf(SQRT_2_DIV_PI * v * (1 + GELU_COEFF * v * v)))))    \
+  /* GELU(x) ≈ x·sigmoid(1.702x) */                                                          \
+  _(very_fast_gelu, (v / (1.0f + expf(-1.702 * v))))
 
 #define _(name, macro)                      \
   tensor_t* op_##name##_(tensor_t* p) {     \
