@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <math.h>
 
 #include "fmt.h"
@@ -11,10 +12,12 @@
 #define GELU_COEFF 0.044715f
 
 #pragma region macros
+#define LOAD_FIELD(p, field) typeof(_Generic((p)->field, u64*: (u64*)(p)->field, default: (p)->field)) field = (p)->field
+
 #define LOAD_TENSOR_META(p) \
   u64 numel = p->n_el;      \
-  u64 rank = p->rank;       \
-  u64* dims = p->dims
+  LOAD_FIELD(p, rank);      \
+  LOAD_FIELD(p, dims)
 
 #define GEN_UNARY_OUT_OF_PLACE_OP(name) \
   tensor_t* name(tensor_t* p) { return name##_(clone_tensor(p)); }
@@ -289,7 +292,7 @@ GEN_UNARY_OUT_OF_PLACE_OP(op_transpose)
 GEN_UNARY_OUT_OF_PLACE_OP(op_softmax)
 #pragma endregion
 
-#pragma region slice and reshape
+#pragma region slice, reshape and permute
 tensor_t* op_slice_(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) {
   u64 _n_el = 1;
   u64 _dims[MAX_TENSOR_DIMS] = DIMS(0);
@@ -443,6 +446,35 @@ reshape:
 
   return r;
 }
+
+tensor_t* op_permute_(tensor_t* p, u64 idxs[MAX_TENSOR_DIMS]) {
+  u64 _dims[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
+  u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
+
+  LOAD_FIELD(p, rank);
+  LOAD_FIELD(p, dims);
+  LOAD_FIELD(p, offsets);
+  LOAD_FIELD(p, strides);
+
+  for (u64 dim = 0; dim < rank; ++dim) {
+    /* Check that all axes are unique */
+    for (u64 i = dim + 1; i < rank; ++i) assert(idxs[dim] != idxs[i]);
+
+    _dims[dim] = dims[idxs[dim]];
+    _offsets[dim] = offsets[idxs[dim]];
+    _strides[dim] = strides[idxs[dim]];
+  }
+
+  p->is_view = true;
+  CPY_FIELD(p, dims);
+  CPY_FIELD(p, offsets);
+  CPY_FIELD(p, strides);
+
+  return p;
+}
+
+tensor_t* op_permute(tensor_t* p, u64 idxs[MAX_TENSOR_DIMS]) { return op_permute_(clone_tensor(p), idxs); }
 #pragma endregion
 
 #pragma region out of place ops

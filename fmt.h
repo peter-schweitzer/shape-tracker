@@ -1,9 +1,9 @@
 #pragma once
 
 #include <inttypes.h>
+#include <stdio.h>
 
 #include "tensor.h"
-#include "tensor_view.h"
 #include "voodoo.h"
 
 #ifndef FMT_F_PREC
