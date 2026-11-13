@@ -1,5 +1,8 @@
 shapetracker
-xor
+
+# examples
+examples/**/out/*
+!examples/**/out/.GITKEEP
 
 # tests
 tests/out/*
