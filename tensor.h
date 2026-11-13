@@ -6,8 +6,8 @@
 
 #include "dat_buff.h"
 #include "num_types.h"
+#include "rand.h"
 #include "voodoo.h"
-
 typedef struct tensor_t {
   data_buff* buff;
   // NOTE: is_view could be made into a flags field later to have less padding
@@ -59,6 +59,26 @@ tensor_t* make_tensor_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
 
   return t;
 }
+
+#pragma region INITIALIZER
+#define INITIALIZER(_) \
+  _(zeros, 0.0)        \
+  _(ones, 1.0)         \
+  _(rand, get_rand_f32())
+
+#define _(name, init)                                                       \
+  tensor_t* make_##name##_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) { \
+    tensor_t* t = make_tensor_from_shape(rank, dims);                       \
+    data_buff* db = t->buff;                                                \
+    for (u64 i = 0; i < db->n_el; ++i) {                                    \
+      db->data[i] = init;                                                   \
+    }                                                                       \
+    return t;                                                               \
+  }
+
+INITIALIZER(_)
+#undef _
+#pragma endregion
 
 tensor_t* clone_tensor(tensor_t* t) {
   ALLOC_PTR(tensor_t, c);

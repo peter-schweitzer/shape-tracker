@@ -6,19 +6,23 @@
 #include "tensor.h"
 #include "voodoo.h"
 
-#ifndef FMT_F_PREC
-#define FMT_F_PREC 2
-#endif
-
-#ifndef FMT_F_LEN
-#define FMT_F_LEN 7
-#endif
+#define FMT_F_PREC_DEFAULT 2
+#define FMT_F_LEN_DEFAULT 5
 
 #define S_I(x) #x
 #define S(x) S_I(x)
 
-#define FMT_F_PREC_STR S(FMT_F_PREC)
+#ifdef FMT_F_LEN
 #define FMT_F_LEN_STR S(FMT_F_LEN)
+#else
+#define FMT_F_LEN_STR S(FMT_F_LEN_DEFAULT)
+#endif
+
+#ifdef FMT_F_PREC
+#define FMT_F_PREC_STR S(FMT_F_PREC)
+#else
+#define FMT_F_PREC_STR S(FMT_F_PREC_DEFAULT)
+#endif
 
 void print_meta(tensor_t* t) {
   printf("r: %" PRIu64 "\n", t->rank);
@@ -97,5 +101,5 @@ void print_mat_with_name(tensor_t* t, const char* name) {
   printf("\n\n");
 }
 
-#undef S_I
 #undef S
+#undef S_I

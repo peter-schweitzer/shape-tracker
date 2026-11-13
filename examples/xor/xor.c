@@ -1,15 +1,16 @@
 #include <stdio.h>
 
-#define FMT_PRINT_N_EL
-#define FMT_F_PREC 5
-#define FMT_F_LEN 7
-
-#include "fmt.h"
 #include "loss.h"
 #include "num_types.h"
 #include "ops.h"
 #include "tensor.h"
 #include "voodoo.h"
+
+#define FMT_PRINT_N_EL
+#define FMT_F_LEN 7
+#define FMT_F_PREC 5
+
+#include "fmt.h"
 
 tensor_t* linear(tensor_t* x, tensor_t* weight, tensor_t* bias) {
   tensor_t* r = op_matmul(x, weight);
@@ -96,21 +97,16 @@ int main(void) {
   const u64 EPOCHS = 1000;
   const f32 LR = 0.1;
 
+  init_rand();
+
   // TODO: generate own random numbers
 #pragma region copied from a reference impl
-  tensor_t* w1 = make_tensor_from_shape(2, U_DIMS(2, 2));
-  set(w1, U_DIMS(0, 0), 0.24835708);
-  set(w1, U_DIMS(0, 1), -0.06913215);
-  set(w1, U_DIMS(1, 0), 0.32384427);
-  set(w1, U_DIMS(1, 1), 0.76151493);
+  tensor_t* w1 = make_rand_from_shape(2, U_DIMS(2, 2));
 
   tensor_t* b1 = make_tensor_from_shape(2, U_DIMS(1, 2));
   fill(b1, 0.0);
 
-  tensor_t* w2 = make_tensor_from_shape(2, U_DIMS(2, 1));
-  set(w2, U_DIMS(0, 0), -0.11707669);
-  set(w2, U_DIMS(1, 0), -0.11706848);
-
+  tensor_t* w2 = make_rand_from_shape(2, U_DIMS(2, 1));
   tensor_t* b2 = make_tensor_from_shape(2, U_DIMS(1, 1));
   fill(b2, 0.0);
 #pragma endregion
@@ -158,7 +154,7 @@ int main(void) {
   destroy_tensor(hidden);
 #pragma endregion
 
-#pragma region CLENAUP
+#pragma region CLEANUP
   destroy_tensor(y);
   destroy_tensor(x);
   destroy_tensor(b2);
