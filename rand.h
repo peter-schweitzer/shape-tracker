@@ -1,4 +1,3 @@
-#include <libc.h>
 #include <stdio.h>
 
 #include "num_types.h"
