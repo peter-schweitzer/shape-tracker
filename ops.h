@@ -279,27 +279,15 @@ f32 op_mean(tensor_t* p) { return op_sum(p) / p->n_el; }
 #pragma endregion
 
 #pragma region custom inplace with gen out of place
-tensor_t* op_transpose_(tensor_t* p) {
-  u64 r = p->rank;
-  assert(r >= 2);
-
-  SWAP(p->dims[r - 2], p->dims[r - 1]);
-  SWAP(p->offsets[r - 2], p->offsets[r - 1]);
-  SWAP(p->strides[r - 2], p->strides[r - 1]);
-
-  return p;
-}
-
 tensor_t* op_softmax_(tensor_t* p) {
   op_exp_(p);
   return op_div_s_(p, op_sum(p));
 }
 
-GEN_UNARY_OUT_OF_PLACE_OP(op_transpose)
 GEN_UNARY_OUT_OF_PLACE_OP(op_softmax)
 #pragma endregion
 
-#pragma region slice, reshape and permute
+#pragma region slice, transpose, reshape and permute
 tensor_t* op_slice_(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) {
   u64 _n_el = 1;
   u64 _dims[MAX_TENSOR_DIMS] = DIMS(0);
@@ -346,6 +334,19 @@ tensor_t* op_slice_(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_
 }
 
 tensor_t* op_slice(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) { return op_slice_(copy_tensor(p), froms, tos, strides); }
+
+tensor_t* op_transpose_(tensor_t* p) {
+  u64 r = p->rank;
+  assert(r >= 2);
+
+  SWAP(p->dims[r - 2], p->dims[r - 1]);
+  SWAP(p->offsets[r - 2], p->offsets[r - 1]);
+  SWAP(p->strides[r - 2], p->strides[r - 1]);
+
+  return p;
+}
+
+tensor_t* op_transpose(tensor_t* p) { return op_transpose_(copy_tensor(p)); }
 
 tensor_t* op_reshape_(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
