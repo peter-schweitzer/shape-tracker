@@ -1,8 +1,7 @@
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "num_types.h"
-
-#define INIT_RAND_BUFF_SIZE 4
 
 static u32 xorshift32_state = 2463534242u;
 
@@ -16,12 +15,13 @@ f32 get_rand_f32() {
   return r;
 }
 
-// no error handling because it's gonna work and if not there are other problems 🤷‍♂️
 void init_rand() {
-  u32 buff = xorshift32_state;  // keep using current state as fallback
   FILE* fd = fopen("/dev/urandom", "r");
-  fread(&buff, sizeof(buff), 1, fd);
+  if (fd == NULL) {
+    printf("couldn't open /dev/urandom, keeping current state " PRIu32, xorshift32_state);
+    return;
+  }
+
+  fread(&xorshift32_state, sizeof(xorshift32_state), 1, fd);
   fclose(fd);
-  printf("old state: %u | new state: %u\n", xorshift32_state, buff);
-  xorshift32_state = buff;
 }
