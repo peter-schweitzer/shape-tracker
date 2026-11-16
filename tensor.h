@@ -80,7 +80,7 @@ INITIALIZER(_)
 #undef _
 #pragma endregion
 
-tensor_t* clone_tensor(tensor_t* t) {
+tensor_t* clone_tensor(const tensor_t* t) {
   ALLOC_PTR(tensor_t, c);
   memcpy(c, t, sizeof(tensor_t));
   c->buff = clone_data_buff(t->buff);
@@ -97,7 +97,7 @@ tensor_t* copy_tensor(tensor_t* t) {
   return c;
 }
 
-u64 idx(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) {
+u64 idx(const tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) {
   i64 idx = 0;
   for (u64 dim = 0; dim < t->rank; ++dim) idx += t->offsets[dim] + (t->strides[dim] * idxs[dim]);
 
@@ -106,7 +106,7 @@ u64 idx(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) {
   return (u64)idx;
 }
 
-f32 get(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) { return t->buff->data[idx(t, idxs)]; }
+f32 get(const tensor_t* t, u64 idxs[MAX_TENSOR_DIMS]) { return t->buff->data[idx(t, idxs)]; }
 void set(tensor_t* t, u64 idxs[MAX_TENSOR_DIMS], f32 val) { t->buff->data[idx(t, idxs)] = val; }
 
 void fill(tensor_t* t, f32 val) {
@@ -117,7 +117,8 @@ void fill(tensor_t* t, f32 val) {
   }
 }
 
-tensor_t* make_contiguous(tensor_t* t) {
+// allocates new data_buffer
+tensor_t* make_contiguous(const tensor_t* t) {
   tensor_t* c = make_tensor_from_shape(t->rank, t->dims);
 
   // Note: memcpy-ing contiguous parts might be better
@@ -130,7 +131,7 @@ tensor_t* make_contiguous(tensor_t* t) {
   return c;
 }
 
-bool same_shape(tensor_t* a, tensor_t* b) {
+bool same_shape(const tensor_t* a, const tensor_t* b) {
   u64 rank = a->rank;
   if (rank != b->rank) return false;
 
@@ -142,7 +143,7 @@ bool same_shape(tensor_t* a, tensor_t* b) {
   return true;
 }
 
-bool is_same(tensor_t* a, tensor_t* b) {
+bool is_same(const tensor_t* a, const tensor_t* b) {
   if (!same_shape(a, b)) return false;
 
   u64 n = a->n_el;

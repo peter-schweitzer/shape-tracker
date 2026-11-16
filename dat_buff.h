@@ -37,7 +37,7 @@ void dec_rc(data_buff* d) {
   if (d->rc == 0) free(d);
 }
 
-data_buff* clone_data_buff(data_buff* d) {
+data_buff* clone_data_buff(const data_buff* d) {
   ALLOC_PTR(data_buff, c);
 
   u64 n_el = d->n_el;

@@ -23,13 +23,13 @@
   LOAD_FIELD(p, dims)
 
 #define GEN_UNARY_OUT_OF_PLACE_OP(name) \
-  tensor_t* name(tensor_t* p) { return name##_(clone_tensor(p)); }
+  tensor_t* name(const tensor_t* p) { return name##_(clone_tensor(p)); }
 
 #define GEN_BINARY_OUT_OF_PLACE_OP(name) \
-  tensor_t* name(tensor_t* a, tensor_t* b) { return name##_(clone_tensor(a), b); }
+  tensor_t* name(const tensor_t* a, const tensor_t* b) { return name##_(clone_tensor(a), b); }
 
 #define GEN_BINARY_SCALAR_OUT_OF_PLACE_OP(name) \
-  tensor_t* name(tensor_t* a, f32 b) { return name##_(clone_tensor(a), b); }
+  tensor_t* name(const tensor_t* a, f32 b) { return name##_(clone_tensor(a), b); }
 
 #pragma endregion
 
@@ -333,7 +333,7 @@ tensor_t* op_slice_(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_
   return p;
 }
 
-tensor_t* op_slice(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) { return op_slice_(copy_tensor(p), froms, tos, strides); }
+tensor_t* op_slice(const tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) { return op_slice_(copy_tensor(p), froms, tos, strides); }
 
 tensor_t* op_transpose_(tensor_t* p) {
   u64 r = p->rank;
@@ -346,7 +346,7 @@ tensor_t* op_transpose_(tensor_t* p) {
   return p;
 }
 
-tensor_t* op_transpose(tensor_t* p) { return op_transpose_(copy_tensor(p)); }
+tensor_t* op_transpose(const tensor_t* p) { return op_transpose_(copy_tensor(p)); }
 
 tensor_t* op_reshape_(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
@@ -397,7 +397,7 @@ tensor_t* op_reshape_(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   return p;
 }
 
-tensor_t* op_reshape(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
+tensor_t* op_reshape(const tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   tensor_t* r;
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
   u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
@@ -482,11 +482,11 @@ tensor_t* op_permute_(tensor_t* p, u64 idxs[MAX_TENSOR_DIMS]) {
   return p;
 }
 
-tensor_t* op_permute(tensor_t* p, u64 idxs[MAX_TENSOR_DIMS]) { return op_permute_(clone_tensor(p), idxs); }
+tensor_t* op_permute(const tensor_t* p, u64 idxs[MAX_TENSOR_DIMS]) { return op_permute_(clone_tensor(p), idxs); }
 #pragma endregion
 
 #pragma region out of place ops
-tensor_t* op_matmul(tensor_t* a, tensor_t* b) {
+tensor_t* op_matmul(const tensor_t* a, const tensor_t* b) {
   u64* dims_a = a->dims;
   u64* dims_b = b->dims;
 

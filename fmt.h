@@ -24,7 +24,7 @@
 #define FMT_F_PREC_STR S(FMT_F_PREC_DEFAULT)
 #endif
 
-void print_meta(tensor_t* t) {
+void print_meta(const tensor_t* t) {
   printf("r: %" PRIu64 "\n", t->rank);
 
 #ifdef FMT_PRINT_N_EL
@@ -38,12 +38,12 @@ void print_meta(tensor_t* t) {
   printf("\n");
 }
 
-void print_meta_with_name(tensor_t* t, const char* name) {
+void print_meta_with_name(const tensor_t* t, const char* name) {
   printf("tensor \"%s\" (%s)\n", name, t->is_view ? "view" : "contiguous");
   print_meta(t);
 }
 
-void print(tensor_t* t) {
+void print(const tensor_t* t) {
   print_meta(t);
 
   u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);
@@ -54,7 +54,7 @@ void print(tensor_t* t) {
   printf("\n\n\n");
 }
 
-void print_with_name(tensor_t* t, const char* name) {
+void print_with_name(const tensor_t* t, const char* name) {
   print_meta_with_name(t, name);
 
   u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);
@@ -65,7 +65,7 @@ void print_with_name(tensor_t* t, const char* name) {
   printf("\n\n\n");
 }
 
-void print_mat(tensor_t* t) {
+void print_mat(const tensor_t* t) {
   assert(t->rank == 2);
 
   printf("Matrix [%" PRIu64 " x %" PRIu64 "] (%s)\n\n", t->dims[0], t->dims[1], t->is_view ? "view" : "contiguous");
@@ -83,7 +83,7 @@ void print_mat(tensor_t* t) {
   printf("\n\n");
 }
 
-void print_mat_with_name(tensor_t* t, const char* name) {
+void print_mat_with_name(const tensor_t* t, const char* name) {
   assert(t->rank == 2);
 
   printf("Matrix \"%s\" [%" PRIu64 " x %" PRIu64 "] (%s)\n\n", name, t->dims[0], t->dims[1], t->is_view ? "view" : "contiguous");
