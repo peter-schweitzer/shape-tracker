@@ -95,6 +95,8 @@ void xor_backward(tensor_t* hidden, tensor_t* y_hat, tensor_t* x, tensor_t* y, t
 
 int main(void) {
   const u64 EPOCHS = 1000;
+  const u64 PRINTS = 4;
+  const u64 PRINT_EACH = EPOCHS / PRINTS;
   const f32 LR = 0.1;
 
   init_rand();
@@ -132,15 +134,16 @@ int main(void) {
     tensor_t* y_hat;
     xor_forward(&hidden, &y_hat, x, w1, b1, w2, b2);
 
-    if (i % 500 == 0) {
+    f32 loss = calc_MSE_loss(y_hat, y);
+    if (i % PRINT_EACH == 0) {
       print_mat(y_hat);
-      printf("loss: %6.3f\n", calc_MSE_loss(y_hat, y));
+      printf("loss: %6.3f\n", loss);
     }
 
     xor_backward(hidden, y_hat, x, y, w1, b1, w2, b2, LR);
   }
 
-#pragma region FINAL RESULT
+#pragma region final result
   tensor_t* hidden;
   tensor_t* y_hat;
   xor_forward(&hidden, &y_hat, x, w1, b1, w2, b2);
@@ -154,7 +157,7 @@ int main(void) {
   destroy_tensor(hidden);
 #pragma endregion
 
-#pragma region CLEANUP
+#pragma region cleanup
   destroy_tensor(y);
   destroy_tensor(x);
   destroy_tensor(b2);
