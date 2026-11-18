@@ -138,24 +138,24 @@ UNARY_ELEMENTWISE_MACRO_OPS(_)
   /* name | op */                      \
   _(pow, powf)
 
-#define _(name, op)                                  \
-  tensor_t* op_##name##_(tensor_t* a, tensor_t* b) { \
-    assert(same_shape(a, b));                        \
-                                                     \
-    LOAD_TENSOR_META(a);                             \
-                                                     \
-    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);             \
-    for (u64 idx = 0; idx < numel; ++idx) {          \
-      IDX2IDXS(idx, idxs, rank, dims)                \
-                                                     \
-      f32 v_a = get(a, idxs);                        \
-      f32 v_b = get(b, idxs);                        \
-      set(a, idxs, op(v_a, v_b));                    \
-    }                                                \
-                                                     \
-    return a;                                        \
-  }                                                  \
-                                                     \
+#define _(name, op)                                        \
+  tensor_t* op_##name##_(tensor_t* a, const tensor_t* b) { \
+    assert(same_shape(a, b));                              \
+                                                           \
+    LOAD_TENSOR_META(a);                                   \
+                                                           \
+    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);                   \
+    for (u64 idx = 0; idx < numel; ++idx) {                \
+      IDX2IDXS(idx, idxs, rank, dims)                      \
+                                                           \
+      f32 v_a = get(a, idxs);                              \
+      f32 v_b = get(b, idxs);                              \
+      set(a, idxs, op(v_a, v_b));                          \
+    }                                                      \
+                                                           \
+    return a;                                              \
+  }                                                        \
+                                                           \
   GEN_BINARY_OUT_OF_PLACE_OP(op_##name)
 
 BINARY_ELEMENTWISE_FUNC_OPS(_)
@@ -171,24 +171,24 @@ BINARY_ELEMENTWISE_FUNC_OPS(_)
   _(mul, *)                          \
   _(divide, /)
 
-#define _(name, op)                                  \
-  tensor_t* op_##name##_(tensor_t* a, tensor_t* b) { \
-    assert(same_shape(a, b));                        \
-                                                     \
-    LOAD_TENSOR_META(a);                             \
-                                                     \
-    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);             \
-    for (u64 idx = 0; idx < numel; ++idx) {          \
-      IDX2IDXS(idx, idxs, rank, dims)                \
-                                                     \
-      f32 v_a = get(a, idxs);                        \
-      f32 v_b = get(b, idxs);                        \
-      set(a, idxs, (v_a op v_b));                    \
-    }                                                \
-                                                     \
-    return a;                                        \
-  }                                                  \
-                                                     \
+#define _(name, op)                                        \
+  tensor_t* op_##name##_(tensor_t* a, const tensor_t* b) { \
+    assert(same_shape(a, b));                              \
+                                                           \
+    LOAD_TENSOR_META(a);                                   \
+                                                           \
+    u64 idxs[MAX_TENSOR_DIMS] = DIMS(0);                   \
+    for (u64 idx = 0; idx < numel; ++idx) {                \
+      IDX2IDXS(idx, idxs, rank, dims)                      \
+                                                           \
+      f32 v_a = get(a, idxs);                              \
+      f32 v_b = get(b, idxs);                              \
+      set(a, idxs, (v_a op v_b));                          \
+    }                                                      \
+                                                           \
+    return a;                                              \
+  }                                                        \
+                                                           \
   GEN_BINARY_OUT_OF_PLACE_OP(op_##name)
 
 BINARY_ELEMENTWISE_OP_OPS(_)
@@ -333,7 +333,7 @@ tensor_t* op_slice_(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_
   return p;
 }
 
-tensor_t* op_slice(const tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) { return op_slice_(copy_tensor(p), froms, tos, strides); }
+tensor_t* op_slice(tensor_t* p, i64 froms[MAX_TENSOR_DIMS], i64 tos[MAX_TENSOR_DIMS], u64 strides[MAX_TENSOR_DIMS]) { return op_slice_(copy_tensor(p), froms, tos, strides); }
 
 tensor_t* op_transpose_(tensor_t* p) {
   u64 r = p->rank;
@@ -346,7 +346,7 @@ tensor_t* op_transpose_(tensor_t* p) {
   return p;
 }
 
-tensor_t* op_transpose(const tensor_t* p) { return op_transpose_(copy_tensor(p)); }
+tensor_t* op_transpose(tensor_t* p) { return op_transpose_(copy_tensor(p)); }
 
 tensor_t* op_reshape_(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
@@ -397,7 +397,7 @@ tensor_t* op_reshape_(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   return p;
 }
 
-tensor_t* op_reshape(const tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
+tensor_t* op_reshape(tensor_t* p, u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   tensor_t* r;
   u64 _offsets[MAX_TENSOR_DIMS] = DIMS(0);
   u64 _strides[MAX_TENSOR_DIMS] = DIMS(0);
@@ -487,8 +487,8 @@ tensor_t* op_permute(const tensor_t* p, u64 idxs[MAX_TENSOR_DIMS]) { return op_p
 
 #pragma region out of place ops
 tensor_t* op_matmul(const tensor_t* a, const tensor_t* b) {
-  u64* dims_a = a->dims;
-  u64* dims_b = b->dims;
+  const u64* dims_a = a->dims;
+  const u64* dims_b = b->dims;
 
   assert(a->rank == 2 && b->rank == 2 && dims_a[1] == dims_b[0]);
 

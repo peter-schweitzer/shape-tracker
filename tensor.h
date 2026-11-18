@@ -36,7 +36,7 @@ void destroy_tensor(tensor_t* t) {
   free(t);
 }
 
-tensor_t* make_tensor_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
+tensor_t* make_tensor_from_shape(const u64 rank, const u64 dims[MAX_TENSOR_DIMS]) {
   u64 n_el = 1;
   for (u64 i = 0; i < rank; ++i) n_el *= dims[i];
 
@@ -53,7 +53,7 @@ tensor_t* make_tensor_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) {
   t->buff = make_dat_buff(n_el);
   t->n_el = n_el;
   t->rank = rank;
-  u64* _dims = dims;
+  const u64* _dims = dims;
   CPY_FIELD(t, dims);
   CPY_FIELD(t, strides);
 
@@ -135,8 +135,8 @@ bool same_shape(const tensor_t* a, const tensor_t* b) {
   u64 rank = a->rank;
   if (rank != b->rank) return false;
 
-  u64* dims_a = a->dims;
-  u64* dims_b = b->dims;
+  const u64* dims_a = a->dims;
+  const u64* dims_b = b->dims;
   for (u64 dim = 0; dim < rank; ++dim)
     if (dims_a[dim] != dims_b[dim]) return false;
 
