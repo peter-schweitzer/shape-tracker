@@ -3,6 +3,7 @@
 #include "loss.h"
 #include "num_types.h"
 #include "ops.h"
+#include "plot.h"
 #include "tensor.h"
 #include "voodoo.h"
 
@@ -99,6 +100,8 @@ int main(void) {
   const u64 PRINT_EACH = EPOCHS / PRINTS;
   const f32 LR = 0.1;
 
+  f32* losses = malloc(sizeof(f32) * EPOCHS);
+
   init_rand();
 
   // TODO: generate own random numbers
@@ -135,6 +138,8 @@ int main(void) {
     xor_forward(&hidden, &y_hat, x, w1, b1, w2, b2);
 
     f32 loss = calc_MSE_loss(y_hat, y);
+    losses[i] = loss;
+
     if (i % PRINT_EACH == 0) {
       print_mat(y_hat);
       printf("loss: %6.3f\n", loss);
@@ -157,7 +162,11 @@ int main(void) {
   destroy_tensor(hidden);
 #pragma endregion
 
+  plot(EPOCHS, losses);
+
 #pragma region cleanup
+  free(losses);
+
   destroy_tensor(y);
   destroy_tensor(x);
   destroy_tensor(b2);
