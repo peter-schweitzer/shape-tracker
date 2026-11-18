@@ -490,13 +490,14 @@ tensor_t* op_matmul(const tensor_t* a, const tensor_t* b) {
   const u64* dims_a = a->dims;
   const u64* dims_b = b->dims;
 
-  assert(a->rank == 2 && b->rank == 2 && dims_a[1] == dims_b[0]);
+  u64 k = dims_a[1];
+
+  assert(a->rank == 2 && b->rank == 2 && dims_b[0] == k);
 
   u64 i = dims_a[0];
   u64 j = dims_b[1];
-  u64 k = dims_a[1];
 
-  MAKE_TENSOR_FROM_DIMS(out, i, j);
+  tensor_t* out = make_tensor_from_shape(2, U_DIMS(i, j));
 
   u64 a_idx[MAX_TENSOR_DIMS] = DIMS(0);
   u64 b_idx[MAX_TENSOR_DIMS] = DIMS(0);

@@ -8,6 +8,7 @@
 #include "num_types.h"
 #include "rand.h"
 #include "voodoo.h"
+
 typedef struct tensor_t {
   data_buff* buff;
   // NOTE: is_view could be made into a flags field later to have less padding
