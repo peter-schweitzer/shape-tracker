@@ -25,3 +25,5 @@ void init_rand() {
   fread(&xorshift32_state, sizeof(xorshift32_state), 1, fd);
   fclose(fd);
 }
+
+void set_rand_state(const u32 state) { xorshift32_state = state; }
