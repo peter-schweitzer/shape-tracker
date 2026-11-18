@@ -3,7 +3,6 @@
 #include "loss.h"
 #include "num_types.h"
 #include "ops.h"
-#include "plot.h"
 #include "tensor.h"
 #include "voodoo.h"
 
@@ -12,6 +11,12 @@
 #define FMT_F_PREC 5
 
 #include "fmt.h"
+
+#define PLOT
+
+#ifdef PLOT
+#include "plot.h"
+#endif
 
 tensor_t* linear(tensor_t* x, tensor_t* weight, tensor_t* bias) {
   tensor_t* r = op_matmul(x, weight);
@@ -95,17 +100,16 @@ void xor_backward(tensor_t* hidden, tensor_t* y_hat, tensor_t* x, tensor_t* y, t
 }
 
 int main(void) {
-  const u64 EPOCHS = 1000;
+#pragma region constants
+  const u64 EPOCHS = 1'000;
   const u64 PRINTS = 4;
   const u64 PRINT_EACH = EPOCHS / PRINTS;
   const f32 LR = 0.1;
+#pragma endregion
 
-  f32* losses = malloc(sizeof(f32) * EPOCHS);
-
+#pragma region init weights and biases
   init_rand();
 
-  // TODO: generate own random numbers
-#pragma region copied from a reference impl
   tensor_t* w1 = make_rand_from_shape(2, U_DIMS(2, 2));
 
   tensor_t* b1 = make_tensor_from_shape(2, U_DIMS(1, 2));
@@ -132,17 +136,23 @@ int main(void) {
   set(y, U_DIMS(2, 0), 1.0);
 #pragma endregion
 
-  for (u64 i = 0; i < EPOCHS; ++i) {
+#ifdef PLOT
+  f32* losses = malloc(sizeof(f32) * EPOCHS);
+#endif
+
+  for (u64 i = 0; i < EPOCHS - 1; ++i) {
     tensor_t* hidden;
     tensor_t* y_hat;
     xor_forward(&hidden, &y_hat, x, w1, b1, w2, b2);
 
     f32 loss = calc_MSE_loss(y_hat, y);
+#ifdef PLOT
     losses[i] = loss;
+#endif
 
     if (i % PRINT_EACH == 0) {
       print_mat(y_hat);
-      printf("loss: %6.3f\n", loss);
+      printf("loss: %6.3f\n\n", loss);
     }
 
     xor_backward(hidden, y_hat, x, y, w1, b1, w2, b2, LR);
@@ -153,19 +163,28 @@ int main(void) {
   tensor_t* y_hat;
   xor_forward(&hidden, &y_hat, x, w1, b1, w2, b2);
 
+  f32 loss = calc_MSE_loss(y_hat, y);
+#ifdef PLOT
+  losses[EPOCHS - 1] = loss;
+#endif
+
   print_mat_with_name(x, "input");
   print_mat_with_name(y, "expected");
   print_mat_with_name(y_hat, "output");
-  printf("loss: %6.3f\n", calc_MSE_loss(y_hat, y));
+  printf("loss: %15.13f\n", loss);
 
   destroy_tensor(y_hat);
   destroy_tensor(hidden);
 #pragma endregion
 
+#ifdef PLOT
   plot(EPOCHS, losses);
+#endif
 
 #pragma region cleanup
+#ifdef PLOT
   free(losses);
+#endif
 
   destroy_tensor(y);
   destroy_tensor(x);
