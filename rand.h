@@ -18,7 +18,7 @@ f32 get_rand_f32() {
 void init_rand() {
   FILE* fd = fopen("/dev/urandom", "r");
   if (fd == NULL) {
-    printf("couldn't open /dev/urandom, keeping current state " PRIu32, xorshift32_state);
+    printf("couldn't open /dev/urandom, keeping current state %" PRIu32, xorshift32_state);
     return;
   }
 
