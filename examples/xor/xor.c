@@ -109,6 +109,7 @@ int main(void) {
 
 #pragma region init weights and biases
   init_rand();
+  // set_rand_seed(3426451894); // this is a good seed I found
 
   tensor_t* w1 = make_rand_from_shape(2, U_DIMS(2, 2));
 
