@@ -10,7 +10,7 @@
 #include "voodoo.h"
 
 typedef struct tensor_t {
-  data_buff* buff;
+  data_buff_t* buff;
   // NOTE: is_view could be made into a flags field later to have less padding
   bool is_view;
   u64 n_el;
@@ -70,7 +70,7 @@ tensor_t* make_tensor_from_shape(const u64 rank, const u64 dims[MAX_TENSOR_DIMS]
 #define _(name, init)                                                       \
   tensor_t* make_##name##_from_shape(u64 rank, u64 dims[MAX_TENSOR_DIMS]) { \
     tensor_t* t = make_tensor_from_shape(rank, dims);                       \
-    data_buff* db = t->buff;                                                \
+    data_buff_t* db = t->buff;                                              \
     for (u64 i = 0; i < db->n_el; ++i) {                                    \
       db->data[i] = init;                                                   \
     }                                                                       \
